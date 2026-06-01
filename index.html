@@ -1,0 +1,4116 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>남령 협찬 대시보드</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  .paste-focus { border-color: #ec4899 !important; background: #fdf2f8 !important; animation: paste-pulse 1s infinite; }
+  @keyframes paste-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(236,72,153,0.4); } 50% { box-shadow: 0 0 0 4px rgba(236,72,153,0.2); } }
+  .upcoming-pulse { animation: urgent-glow 2s ease-in-out infinite; }
+  @keyframes urgent-glow { 0%,100% { box-shadow: 0 0 8px rgba(239,68,68,0.15); } 50% { box-shadow: 0 0 20px rgba(239,68,68,0.3); } }
+  .dday-badge { display:inline-flex;align-items:center;gap:2px;padding:3px 10px;border-radius:999px;font-weight:900;font-size:12px;letter-spacing:-0.5px; }
+  .dday-urgent { background:#fee2e2;color:#dc2626;animation:dday-blink 1.5s ease-in-out infinite; }
+  .dday-warn { background:#fef3c7;color:#d97706; }
+  .dark .dday-urgent { background:#7f1d1d;color:#fca5a5; }
+  .dark .dday-warn { background:#78350f;color:#fde68a; }
+  @keyframes dday-blink { 0%,100%{opacity:1;} 50%{opacity:0.6;} }
+  :root {
+    --bg: #fafafa;
+    --card: #ffffff;
+    --border: #ececec;
+    --text: #111111;
+    --muted: #6b7280;
+    --accent: #111111;
+  }
+  .dark {
+    --bg: #0a0a0a;
+    --card: #141414;
+    --border: #262626;
+    --text: #f5f5f5;
+    --muted: #9ca3af;
+    --accent: #ffffff;
+  }
+  * { font-family: 'Pretendard', system-ui, -apple-system, sans-serif; }
+  body { background: var(--bg); color: var(--text); transition: background .2s, color .2s; }
+  .card { background: var(--card); border: 1px solid var(--border); }
+  .border-c { border-color: var(--border); }
+  .text-muted { color: var(--muted); }
+  .btn-primary { background: var(--accent); color: var(--card); }
+  .input { background: var(--card); border: 1px solid var(--border); color: var(--text); }
+  .input:focus { outline: none; border-color: var(--text); }
+
+  /* 캘린더 */
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal-day {
+    min-height: 100px; padding: 6px; border: 1px solid var(--border);
+    border-radius: 10px; background: var(--card); position: relative;
+    transition: transform .1s;
+  }
+  .cal-day:hover { transform: translateY(-1px); }
+  .cal-day.today { border: 2px solid var(--text); }
+  .cal-day.other-month { opacity: 0.35; }
+  .cal-day .num { font-size: 12px; font-weight: 600; }
+  .chip {
+    display: inline-block; padding: 2px 6px; margin-top: 3px;
+    font-size: 10px; border-radius: 5px; line-height: 1.3;
+    max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    cursor: pointer;
+  }
+  .chip-youtube { background: #ffe4e6; color: #be123c; }
+  .chip-instagram { background: #fce7f3; color: #9d174d; }
+  .chip-tiktok { background: #e0e7ff; color: #3730a3; }
+  .chip-blog { background: #d1fae5; color: #065f46; }
+  .chip-etc { background: #f3f4f6; color: #374151; }
+  .dark .chip-youtube { background: #4c0519; color: #fecdd3; }
+  .dark .chip-instagram { background: #500724; color: #fbcfe8; }
+  .dark .chip-tiktok { background: #1e1b4b; color: #c7d2fe; }
+  .dark .chip-blog { background: #022c22; color: #a7f3d0; }
+  .dark .chip-etc { background: #1f2937; color: #d1d5db; }
+
+  /* 캘린더 멀티데이 바 (중간 날짜) - 가느다란 1px 선 */
+  .cal-bar { display: block; height: 1px; margin: 6px 0; border-radius: 0; cursor: pointer; opacity: 0.85; }
+  .cal-bar.cal-bar-youtube { background: #fb7185; }
+  .cal-bar.cal-bar-instagram { background: #f472b6; }
+  .cal-bar.cal-bar-tiktok { background: #818cf8; }
+  .cal-bar.cal-bar-blog { background: #34d399; }
+  .cal-bar.cal-bar-etc { background: #9ca3af; }
+  .dark .cal-bar { opacity: 0.6; }
+
+  /* 상태 뱃지 */
+  .badge { padding: 3px 10px; font-size: 11px; border-radius: 999px; font-weight: 600; }
+  .badge-예정 { background: #dbeafe; color: #1e40af; }
+  .badge-진행중 { background: #fef3c7; color: #92400e; }
+  .badge-완료 { background: #d1fae5; color: #065f46; }
+  .badge-취소 { background: #fee2e2; color: #991b1b; }
+  .dark .badge-예정 { background: #1e3a8a; color: #bfdbfe; }
+  .dark .badge-진행중 { background: #78350f; color: #fde68a; }
+  .dark .badge-완료 { background: #064e3b; color: #a7f3d0; }
+  .dark .badge-취소 { background: #7f1d1d; color: #fecaca; }
+
+  /* 모달 */
+  .modal-bg { background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
+
+  /* 프린트 */
+  @media print {
+    .no-print { display: none !important; }
+    body { background: white !important; color: black !important; }
+    .card { border: 1px solid #ccc !important; box-shadow: none !important; }
+  }
+
+  /* 스크롤바 */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  /* 칸반 보드 */
+  .kanban-board { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 12px; min-height: 60vh; align-items: flex-start; }
+  .kanban-col { min-width: 240px; max-width: 280px; flex: 1; border-radius: 16px; display: flex; flex-direction: column; }
+  .kanban-col-header { padding: 12px 14px; border-radius: 14px 14px 0 0; font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 2; }
+  .kanban-col-body { padding: 8px; flex: 1; min-height: 80px; display: flex; flex-direction: column; gap: 8px; border-radius: 0 0 14px 14px; transition: background 0.2s; }
+  .kanban-col-body.drag-over { outline: 2px dashed var(--accent); outline-offset: -2px; }
+  .kanban-card { border-radius: 12px; padding: 10px 12px; cursor: grab; transition: transform 0.15s, box-shadow 0.15s; border: 1px solid var(--border); }
+  .kanban-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+  .kanban-card.dragging { opacity: 0.4; transform: scale(0.96); }
+  .kanban-tab-active { background: var(--accent) !important; color: white !important; }
+
+  .col-received .kanban-col-header { background: #dbeafe; color: #1e40af; }
+  .col-received .kanban-col-body { background: #eff6ff; }
+  .col-production .kanban-col-header { background: #fef3c7; color: #92400e; }
+  .col-production .kanban-col-body { background: #fffbeb; }
+  .col-confirm .kanban-col-header { background: #e9d5ff; color: #6b21a8; }
+  .col-confirm .kanban-col-body { background: #faf5ff; }
+  .col-upload .kanban-col-header { background: #bbf7d0; color: #166534; }
+  .col-upload .kanban-col-body { background: #f0fdf4; }
+  .col-payment .kanban-col-header { background: #fed7aa; color: #9a3412; }
+  .col-payment .kanban-col-body { background: #fff7ed; }
+  .col-done .kanban-col-header { background: #a7f3d0; color: #065f46; }
+  .col-done .kanban-col-body { background: #ecfdf5; }
+
+  .dark .col-received .kanban-col-header { background: #1e3a8a; color: #bfdbfe; }
+  .dark .col-received .kanban-col-body { background: #1e293b; }
+  .dark .col-production .kanban-col-header { background: #78350f; color: #fde68a; }
+  .dark .col-production .kanban-col-body { background: #1c1917; }
+  .dark .col-confirm .kanban-col-header { background: #581c87; color: #e9d5ff; }
+  .dark .col-confirm .kanban-col-body { background: #1e1b2e; }
+  .dark .col-upload .kanban-col-header { background: #166534; color: #bbf7d0; }
+  .dark .col-upload .kanban-col-body { background: #0f1f15; }
+  .dark .col-payment .kanban-col-header { background: #9a3412; color: #fed7aa; }
+  .dark .col-payment .kanban-col-body { background: #1c1210; }
+  .dark .col-done .kanban-col-header { background: #065f46; color: #a7f3d0; }
+  .dark .col-done .kanban-col-body { background: #0f1f15; }
+  .dark .kanban-card { background: var(--card); }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- 헤더 -->
+<header class="border-b border-c sticky top-0 z-30 backdrop-blur bg-opacity-80 no-print" style="background: var(--card);">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+    <button onclick="goHome()" class="flex items-center gap-3 hover:opacity-70 transition" title="메인으로">
+      <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background: var(--accent); color: var(--card);">
+        <span class="font-bold">N</span>
+      </div>
+      <div class="text-left">
+        <h1 class="text-lg font-bold">남령 협찬 대시보드</h1>
+        <p class="text-xs text-muted">일정 · 업체 · 콘텐츠 한눈에</p>
+      </div>
+    </button>
+    <div class="flex items-center gap-2">
+      <button onclick="openParseModal()" class="card px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90" title="이메일 복붙으로 자동 등록">📧 메일로 추가</button>
+      <button onclick="openModal()" class="btn-primary px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90">+ 협찬 추가</button>
+      <button onclick="toggleDark()" id="darkBtn" class="card px-3 py-2 rounded-lg text-sm" title="다크모드">🌙</button>
+      <div class="relative">
+        <button onclick="toggleMenu()" class="card px-3 py-2 rounded-lg text-sm">⋯</button>
+        <div id="menu" class="hidden absolute right-0 mt-2 card rounded-lg shadow-lg p-2 w-48 z-40">
+          <button onclick="exportJSON()" class="block w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-sm">📦 JSON 백업</button>
+          <button onclick="importJSON()" class="block w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-sm">📥 JSON 가져오기</button>
+          <button onclick="copyShareLink()" class="block w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-sm">🔗 공유 링크 복사</button>
+          <button onclick="window.print()" class="block w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-sm">🖨️ 인쇄 / PDF</button>
+          <button onclick="exportCSV()" class="block w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-sm">📊 엑셀(CSV) 내보내기</button>
+          <button onclick="showAllBackups(); toggleMenu();" class="block w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-sm">💾 백업 히스토리 (자동복구)</button>
+          <hr class="my-1 border-c">
+          <button onclick="showBookmarklet()" class="block w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-sm">🔖 자동 추출 북마크릿 설치</button>
+          <hr class="my-1 border-c">
+          <button onclick="clearAll()" class="block w-full text-left px-3 py-2 hover:bg-red-50 dark:hover:bg-red-900 rounded text-sm text-red-600">🗑️ 전체 삭제</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- 공유 모드 안내 -->
+<div id="shareBanner" class="hidden bg-yellow-50 dark:bg-yellow-900 border-b border-yellow-200 dark:border-yellow-700 text-yellow-900 dark:text-yellow-100 text-sm no-print">
+  <div class="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between">
+    <span>🔗 <b>공유 보기 모드</b> · 업체와 공유된 읽기 전용 대시보드입니다</span>
+    <button onclick="exitShareMode()" class="underline">내 대시보드로 돌아가기</button>
+  </div>
+</div>
+
+<main class="max-w-7xl mx-auto px-4 py-6">
+
+  <!-- 통계 -->
+  <section class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+    <div class="card rounded-xl p-4">
+      <p class="text-xs text-muted">이번 달 협찬</p>
+      <p class="text-2xl font-bold mt-1" id="statMonth">0건</p>
+    </div>
+    <div class="card rounded-xl p-4">
+      <p class="text-xs text-muted">진행중</p>
+      <p class="text-2xl font-bold mt-1" id="statActive">0건</p>
+    </div>
+    <div class="card rounded-xl p-4">
+      <p class="text-xs text-muted">이번 달 수익</p>
+      <p class="text-2xl font-bold mt-1" id="statRevenue">₩0</p>
+    </div>
+    <div class="card rounded-xl p-4">
+      <p class="text-xs text-muted">전체 누적</p>
+      <p class="text-2xl font-bold mt-1" id="statTotal">₩0</p>
+    </div>
+  </section>
+
+  <!-- 다가오는 마감 -->
+  <section id="upcomingBox" class="rounded-xl p-4 mb-6 hidden border-2 border-red-400 dark:border-red-600 bg-gradient-to-r from-red-50 via-orange-50 to-yellow-50 dark:from-red-950/60 dark:via-orange-950/40 dark:to-yellow-950/30 shadow-lg shadow-red-200/40 dark:shadow-red-900/30 upcoming-pulse">
+    <h3 class="text-sm font-black mb-3 flex items-center gap-2 text-red-600 dark:text-red-400">🔥 7일 내 마감 임박</h3>
+    <div id="upcomingList" class="space-y-2"></div>
+  </section>
+
+  <!-- 탭 -->
+  <div class="flex gap-2 mb-4 no-print">
+    <button onclick="switchView('calendar')" id="tabCalendar" class="px-4 py-2 rounded-lg text-sm font-semibold btn-primary">📅 캘린더</button>
+    <button onclick="switchView('list')" id="tabList" class="card px-4 py-2 rounded-lg text-sm font-semibold">📋 리스트</button>
+    <button onclick="switchView('companies')" id="tabCompanies" class="card px-4 py-2 rounded-lg text-sm font-semibold">🏢 업체별</button>
+    <button onclick="switchView('caption')" id="tabCaption" class="card px-4 py-2 rounded-lg text-sm font-semibold hidden">✍️ 캡션 모음</button>
+    <button onclick="switchView('kanban')" id="tabKanban" class="card px-4 py-2 rounded-lg text-sm font-semibold">📌 상황판</button>
+    <button onclick="switchView('prompts')" id="tabPrompts" class="card px-4 py-2 rounded-lg text-sm font-semibold">💬 프롬프트</button>
+    <button onclick="switchView('links')" id="tabLinks" class="card px-4 py-2 rounded-lg text-sm font-semibold">🔗 공유링크</button>
+
+    <div class="ml-auto flex gap-2 items-center">
+      <input id="search" oninput="renderAll()" placeholder="🔍 검색 (업체, 메모...)" class="input px-3 py-2 rounded-lg text-sm w-56" />
+      <select id="filterStatus" onchange="renderAll()" class="input px-3 py-2 rounded-lg text-sm">
+        <option value="">모든 상태</option>
+        <option value="예정">예정</option>
+        <option value="진행중">진행중</option>
+        <option value="완료">완료</option>
+        <option value="취소">취소</option>
+      </select>
+      <select id="filterPlatform" onchange="renderAll()" class="input px-3 py-2 rounded-lg text-sm">
+        <option value="">모든 플랫폼</option>
+        <option value="youtube">유튜브</option>
+        <option value="instagram">인스타그램</option>
+        <option value="tiktok">틱톡</option>
+        <option value="blog">블로그</option>
+        <option value="etc">기타</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- 캘린더 뷰 -->
+  <section id="viewCalendar">
+    <div class="card rounded-xl p-4">
+      <div class="flex items-center justify-between mb-4">
+        <h2 id="calTitle" class="text-lg font-bold"></h2>
+        <div class="flex gap-1">
+          <button onclick="changeMonth(-1)" class="card px-3 py-1 rounded-lg text-sm">‹</button>
+          <button onclick="goToday()" class="card px-3 py-1 rounded-lg text-sm">오늘</button>
+          <button onclick="changeMonth(1)" class="card px-3 py-1 rounded-lg text-sm">›</button>
+        </div>
+      </div>
+      <div class="cal-grid mb-1">
+        <div class="text-xs text-muted text-center py-1 font-semibold">일</div>
+        <div class="text-xs text-muted text-center py-1 font-semibold">월</div>
+        <div class="text-xs text-muted text-center py-1 font-semibold">화</div>
+        <div class="text-xs text-muted text-center py-1 font-semibold">수</div>
+        <div class="text-xs text-muted text-center py-1 font-semibold">목</div>
+        <div class="text-xs text-muted text-center py-1 font-semibold">금</div>
+        <div class="text-xs text-muted text-center py-1 font-semibold">토</div>
+      </div>
+      <div id="calBody" class="cal-grid"></div>
+    </div>
+  </section>
+
+  <!-- 리스트 뷰 -->
+  <section id="viewList" class="hidden">
+    <div id="listContactTabs" class="flex gap-1.5 flex-wrap mb-3"></div>
+    <div class="card rounded-xl overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead style="background: var(--bg);">
+            <tr class="text-left">
+              <th class="px-4 py-3 font-semibold">업체</th>
+              <th class="px-4 py-3 font-semibold">담당자</th>
+              <th class="px-4 py-3 font-semibold">플랫폼</th>
+              <th class="px-4 py-3 font-semibold">마감일</th>
+              <th class="px-4 py-3 font-semibold">상태</th>
+              <th class="px-4 py-3 font-semibold text-right">금액</th>
+              <th class="px-4 py-3 no-print"></th>
+            </tr>
+          </thead>
+          <tbody id="listBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- 업체별 뷰 -->
+  <section id="viewCompanies" class="hidden">
+    <div id="companiesBody" class="grid md:grid-cols-2 gap-4"></div>
+  </section>
+
+  <!-- 캡션 모음 뷰 -->
+  <section id="viewCaption" class="hidden">
+    <div id="captionContactTabs" class="flex gap-1.5 flex-wrap mb-3"></div>
+    <div class="mb-3 flex items-center justify-between">
+      <p class="text-xs text-muted">협찬별 캡션 한눈에 · 박스 클릭하면 복사 💡</p>
+      <select id="filterCaptionStatus" onchange="renderCaption()" class="input px-3 py-1.5 rounded-lg text-xs">
+        <option value="">모든 상태</option>
+        <option value="예정">예정</option>
+        <option value="진행중">진행중</option>
+        <option value="완료">완료</option>
+      </select>
+    </div>
+    <div id="captionBody" class="grid md:grid-cols-2 gap-4"></div>
+  </section>
+
+  <!-- 상황판 (칸반) 뷰 -->
+  <section id="viewKanban" class="hidden">
+    <!-- 담당자 탭 -->
+    <div class="flex items-center gap-2 mb-4 flex-wrap">
+      <div id="kanbanContactTabs" class="flex gap-1.5 flex-wrap"></div>
+    </div>
+    <div id="kanbanBoard" class="kanban-board"></div>
+  </section>
+
+  <!-- 프롬프트 관리 -->
+  <section id="viewPrompts" class="hidden">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h2 class="text-base font-bold">💬 프롬프트 관리</h2>
+        <p class="text-xs text-muted">자주 쓰는 프롬프트 저장 · 클릭 복사</p>
+      </div>
+      <button onclick="addPrompt()" class="btn-primary px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90">+ 추가</button>
+    </div>
+    <div id="promptList" class="space-y-3"></div>
+  </section>
+
+  <!-- 공유 링크 -->
+  <section id="viewLinks" class="hidden">
+    <div class="mb-4">
+      <h2 class="text-base font-bold">🔗 사이트 공유 링크</h2>
+      <p class="text-xs text-muted">팔로워에게 공유할 링크 모음</p>
+    </div>
+    <div id="linkList" class="space-y-3"></div>
+  </section>
+
+</main>
+
+<!-- 모달: 협찬 추가/수정 -->
+<div id="modal" class="hidden fixed inset-0 modal-bg z-50 flex items-center justify-center p-4 no-print">
+  <div class="card rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div class="p-5 border-b border-c flex justify-between items-center sticky top-0" style="background: var(--card);">
+      <h3 class="text-lg font-bold" id="modalTitle">협찬 추가</h3>
+      <button onclick="closeModal()" class="text-2xl text-muted hover:opacity-70">×</button>
+    </div>
+    <div class="p-5 space-y-4">
+      <input type="hidden" id="f_id" />
+      <input type="hidden" id="f_pageContent" />
+      <input type="hidden" id="f_imageGallery" />
+
+      <!-- 캠페인 사진 -->
+      <div>
+        <label class="text-xs font-semibold text-muted mb-1 block">📸 프로젝트 사진 <span class="text-[10px] font-normal text-blue-400">(이미지 복붙 가능!)</span></label>
+        <div class="flex gap-3 items-start">
+          <div id="f_imageDrop" onclick="document.getElementById('f_imageFile').click()"
+            class="w-20 h-20 rounded-xl border-2 border-dashed border-[#333] bg-[#111] flex items-center justify-center cursor-pointer hover:border-blue-400 transition-colors overflow-hidden flex-shrink-0 relative"
+            onpaste="handleImagePaste(event)" tabindex="0">
+            <img id="f_imagePreview" src="" alt="" class="w-full h-full object-cover absolute inset-0" style="display:none" />
+            <span id="f_imagePlaceholder" class="text-[10px] text-[#555] text-center leading-tight">📋 붙여넣기<br>또는 클릭</span>
+          </div>
+          <input type="file" id="f_imageFile" accept="image/*" class="hidden" onchange="handleImageFile(event)" />
+          <div class="flex-1 space-y-1.5">
+            <input id="f_imageUrl" oninput="previewImageUrl(this.value)" class="input w-full px-3 py-2 rounded-lg text-xs" placeholder="또는 URL 직접 입력" />
+            <button type="button" onclick="clearProjectImage()" class="text-[10px] text-red-400 hover:underline">🗑️ 사진 제거</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs font-semibold text-muted mb-1 block">업체명 *</label>
+          <input id="f_company" class="input w-full px-3 py-2 rounded-lg" placeholder="예: 무신사" />
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-muted mb-1 block">담당자</label>
+          <input id="f_contact" class="input w-full px-3 py-2 rounded-lg" placeholder="홍길동 매니저" />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs font-semibold text-muted mb-1 block">연락처 (이메일/카톡)</label>
+          <input id="f_contactInfo" class="input w-full px-3 py-2 rounded-lg" placeholder="email@brand.com" />
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-muted mb-1 block">제품/캠페인명</label>
+          <input id="f_product" class="input w-full px-3 py-2 rounded-lg" placeholder="신상 가디건" />
+        </div>
+      </div>
+
+      <div>
+        <label class="text-xs font-semibold text-muted mb-1 block">콘텐츠 제목</label>
+        <input id="f_title" class="input w-full px-3 py-2 rounded-lg" placeholder="예: 봄 코디 룩북" />
+      </div>
+
+      <div class="grid grid-cols-3 gap-3">
+        <div>
+          <label class="text-xs font-semibold text-muted mb-1 block">플랫폼 *</label>
+          <select id="f_platform" class="input w-full px-3 py-2 rounded-lg">
+            <option value="youtube">유튜브</option>
+            <option value="instagram">인스타그램</option>
+            <option value="tiktok">틱톡</option>
+            <option value="blog">블로그</option>
+            <option value="etc">기타</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-muted mb-1 block">시작일</label>
+          <input type="date" id="f_start" class="input w-full px-3 py-2 rounded-lg" />
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-muted mb-1 block">마감일 *</label>
+          <input type="date" id="f_due" class="input w-full px-3 py-2 rounded-lg" />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs font-semibold text-muted mb-1 block">상태</label>
+          <select id="f_status" class="input w-full px-3 py-2 rounded-lg">
+            <option value="예정">예정</option>
+            <option value="진행중">진행중</option>
+            <option value="완료">완료</option>
+            <option value="취소">취소</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-muted mb-1 block">금액 (원)</label>
+          <input type="number" id="f_price" class="input w-full px-3 py-2 rounded-lg" placeholder="500000" />
+        </div>
+      </div>
+
+      <div>
+        <label class="text-xs font-semibold text-muted mb-1 block">필수 가이드라인 <span class="text-[10px] font-normal text-blue-400">(💡 SHEIN 브리핑 전체 붙여넣기 → 자동 파싱!)</span></label>
+        <textarea id="f_guide" class="input w-full px-3 py-2 rounded-lg" rows="2" placeholder="해시태그, 멘션, 필수 멘트 등 (또는 SHEIN 전체 브리핑 붙여넣기)" onpaste="handleBriefPaste(event)"></textarea>
+      </div>
+
+      <div>
+        <label class="text-xs font-semibold text-muted mb-1 block">🔒 원본 페이지 (비공개 — 나만 보는 링크)</label>
+        <input id="f_link" class="input w-full px-3 py-2 rounded-lg" placeholder="협찬 페이지 URL (크리에이터센터 등)" />
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-muted mb-1 block">🎬 영상 링크 (공개 — 팔로워에게 보여줄 영상)</label>
+        <input id="f_videoLink" class="input w-full px-3 py-2 rounded-lg" placeholder="유튜브, 틱톡, 인스타 영상 URL" />
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs font-semibold text-muted mb-1 block">🎟️ 쿠폰 코드</label>
+          <input id="f_couponCode" class="input w-full px-3 py-2 rounded-lg" placeholder="예: CVKRnamryeong034" onpaste="handleBriefPaste(event)" />
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-muted mb-1 block">🔎 검색 키워드 (콤마로 구분)</label>
+          <input id="f_searchKeywords" class="input w-full px-3 py-2 rounded-lg" placeholder="Dazy CURVE, Elenzga CURVE" onpaste="handleBriefPaste(event)" />
+        </div>
+      </div>
+
+      <div>
+        <label class="text-xs font-semibold text-muted mb-1 block">📍 제품 리스트 (LOOK별 정리)</label>
+        <textarea id="f_productList" class="input w-full px-3 py-2 rounded-lg font-mono text-xs" rows="6" placeholder="🎀 LOOK 1
+Dazy CURVE | 🆔 165735109 | 💰 7,576원
+🔗 https://shein.top/cw8gmtm
+
+🎀 LOOK 2
+..." onpaste="handleBriefPaste(event)"></textarea>
+      </div>
+
+      <div>
+        <label class="text-xs font-semibold text-muted mb-1 block">메모</label>
+        <textarea id="f_memo" class="input w-full px-3 py-2 rounded-lg" rows="3" placeholder="추가 메모, 컨셉, 주의사항..." onpaste="handleBriefPaste(event)"></textarea>
+      </div>
+
+      <!-- 진행 체크리스트 -->
+      <div>
+        <label class="text-xs font-semibold text-muted mb-1 block">진행 체크리스트</label>
+        <div class="space-y-1">
+          <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="c_brief"> 브리핑 받음</label>
+          <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="c_product"> 제품 수령</label>
+          <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="c_shoot"> 촬영 완료</label>
+          <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="c_edit"> 편집 완료</label>
+          <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="c_approve"> 업체 컨펌</label>
+          <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="c_upload"> 업로드 완료</label>
+          <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="c_paid"> 정산 완료</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="p-5 border-t border-c flex justify-between sticky bottom-0" style="background: var(--card);">
+      <button onclick="deleteCurrent()" id="deleteBtn" class="text-red-600 text-sm hover:underline hidden">🗑️ 삭제</button>
+      <div class="flex gap-2 ml-auto">
+        <button onclick="closeModal()" class="card px-4 py-2 rounded-lg text-sm">취소</button>
+        <button onclick="saveItem()" class="btn-primary px-5 py-2 rounded-lg text-sm font-semibold">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 북마크릿 설치 모달 -->
+<div id="bookmarkletModal" class="hidden fixed inset-0 modal-bg z-50 flex items-center justify-center p-4 no-print">
+  <div class="card rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div class="p-5 border-b border-c flex justify-between items-center sticky top-0" style="background: var(--card);">
+      <div>
+        <h3 class="text-lg font-bold">🔖 자동 추출 북마크릿</h3>
+        <p class="text-xs text-muted mt-1">한 번 설치하면 어떤 사이트에서든 클릭 한 번으로 협찬 정보 자동 입력!</p>
+      </div>
+      <button onclick="closeBookmarklet()" class="text-2xl text-muted hover:opacity-70">×</button>
+    </div>
+    <div class="p-5 space-y-5">
+      <!-- Step 1 -->
+      <div class="flex gap-3">
+        <div class="flex-shrink-0 w-7 h-7 rounded-full btn-primary flex items-center justify-center text-sm font-bold">1</div>
+        <div class="flex-1">
+          <p class="font-semibold text-sm">북마크 바 켜기</p>
+          <p class="text-xs text-muted mt-1">크롬에서 <kbd class="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono">Ctrl + Shift + B</kbd> 누르면 주소창 아래에 북마크 바가 나타나요</p>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="flex gap-3">
+        <div class="flex-shrink-0 w-7 h-7 rounded-full btn-primary flex items-center justify-center text-sm font-bold">2</div>
+        <div class="flex-1">
+          <p class="font-semibold text-sm">아래 버튼을 <span class="text-red-500">드래그</span>해서 북마크 바에 올려놓기</p>
+          <p class="text-xs text-muted mt-1">⚠️ 클릭하지 말고 마우스로 끌어서 놓아야 해요!</p>
+          <div class="mt-3 p-4 bg-gradient-to-r from-pink-50 to-purple-50 dark:from-pink-950 dark:to-purple-950 rounded-lg border-2 border-dashed border-c text-center">
+            <a id="bookmarkletLink" href="#" class="inline-block bg-black text-white px-5 py-3 rounded-lg font-semibold hover:scale-105 transition cursor-grab active:cursor-grabbing" draggable="true">📋 협찬 추가하기</a>
+            <p class="text-xs text-muted mt-2">↑ 이 검정색 버튼을 위쪽 북마크 바로 드래그!</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="flex gap-3">
+        <div class="flex-shrink-0 w-7 h-7 rounded-full btn-primary flex items-center justify-center text-sm font-bold">3</div>
+        <div class="flex-1">
+          <p class="font-semibold text-sm">사용하기</p>
+          <ul class="text-xs text-muted mt-1 space-y-1 list-disc list-inside">
+            <li>쉬인, 무신사 같은 브랜드 사이트에서 협찬 정보 페이지 들어가기 (로그인 상태)</li>
+            <li>북마크 바의 <b>"📋 협찬 추가하기"</b> 클릭</li>
+            <li>대시보드가 새 탭에서 열리면서 정보가 자동으로 입력됨</li>
+            <li>확인하고 저장! 🎉</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 주의사항 -->
+      <div class="text-xs bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+        <p class="font-semibold mb-1">⚠️ 알아둘 점</p>
+        <ul class="space-y-1 text-muted">
+          <li>• 대시보드 주소가 바뀌면 북마크릿도 다시 만들어야 해요</li>
+          <li>• 100% 완벽한 자동화는 아니에요 — 페이지 내용이 복잡하면 일부만 잡힐 수 있어요</li>
+          <li>• 안 잡힌 정보는 수동으로 입력하면 돼요!</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 이메일 파싱 모달 -->
+<div id="parseModal" class="hidden fixed inset-0 modal-bg z-50 flex items-center justify-center p-4 no-print">
+  <div class="card rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div class="p-5 border-b border-c flex justify-between items-center sticky top-0" style="background: var(--card);">
+      <div>
+        <h3 class="text-lg font-bold">📧 이메일로 협찬 추가</h3>
+        <p class="text-xs text-muted mt-1">메일 본문 통째로 붙여넣으면 자동으로 정보 뽑아줄게</p>
+      </div>
+      <button onclick="closeParseModal()" class="text-2xl text-muted hover:opacity-70">×</button>
+    </div>
+    <div class="p-5 space-y-4">
+      <div>
+        <label class="text-xs font-semibold text-muted mb-1 block">메일 본문 붙여넣기</label>
+        <textarea id="parseInput" class="input w-full px-3 py-2 rounded-lg font-mono text-sm" rows="12" placeholder="예시:
+보낸사람: Camile(SHEIN) <camile@shein.com>
+제목: [협업 제안] May Women Apparel Promotion
+
+안녕하세요 남령님,
+SHEIN의 신규 캠페인 'Light Up Summer' 협업 제안드립니다.
+
+- 콘텐츠: 유튜브 룩북 영상
+- 마감일: 2026-06-10
+- 페이: 800,000원
+- 가이드: #SHEIN #광고 해시태그 필수
+
+자세한 내용은 https://shein.com/creator 참고 바랍니다."></textarea>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="doParse()" class="btn-primary flex-1 px-4 py-2 rounded-lg text-sm font-semibold">🔍 분석해서 자동 입력</button>
+        <button onclick="document.getElementById('parseInput').value=''" class="card px-4 py-2 rounded-lg text-sm">지우기</button>
+      </div>
+      <div class="text-xs text-muted bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+        <p class="font-semibold mb-1">💡 자동 추출되는 항목</p>
+        <p>업체명 · 담당자 · 이메일 · 마감일 · 금액 · 플랫폼 (유튜브/인스타/틱톡) · 링크 · 가이드라인</p>
+        <p class="mt-2 text-muted">분석 후 확인하고 수정할 수 있어!</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 상세보기 모달 -->
+<div id="detailModal" class="hidden fixed inset-0 modal-bg z-50 flex items-center justify-center p-4 no-print">
+  <div class="card rounded-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
+    <div class="p-5 border-b border-c flex justify-between items-center">
+      <h3 class="text-lg font-bold">협찬 상세</h3>
+      <button onclick="closeDetail()" class="text-2xl text-muted hover:opacity-70">×</button>
+    </div>
+    <div id="detailBody" class="p-5"></div>
+    <div class="p-5 border-t border-c flex justify-end gap-2 no-print" id="detailActions"></div>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept=".json" class="hidden" />
+
+<script>
+// ===== 데이터 =====
+const STORAGE_KEY = 'sponsorship_dashboard_v1';
+let items = [];
+let currentDate = new Date();
+let currentView = 'calendar';
+let editingId = null;
+let isShareMode = false;
+
+// ===== 초기화 =====
+function init() {
+  // 공유 모드 체크
+  const params = new URLSearchParams(window.location.search);
+
+  // 북마크릿에서 들어온 prefill 처리
+  if (params.has('prefill')) {
+    try {
+      const decoded = decodeURIComponent(escape(atob(decodeURIComponent(params.get('prefill')))));
+      const pageData = JSON.parse(decoded);
+      const combined = `URL: ${pageData.url}\n페이지 제목: ${pageData.title}\n\n${pageData.text}`;
+      loadLocal();
+      if (localStorage.getItem('dark') === '1') document.documentElement.classList.add('dark');
+      renderAll();
+      const parsed = parseEmail(combined);
+      parsed.pageContent = pageData.text;
+      parsed.memo = ''; // 메모는 사용자가 직접 입력 (원본은 pageContent에 따로 저장)
+      parsed.link = parsed.link || pageData.url;
+      parsed.title = parsed.title || pageData.title;
+      parsed.imageGallery = (pageData.images || []).filter(u => u && !u.includes('logo') && !u.includes('icon'));
+      parsed.imageUrl = parsed.imageGallery[0] || '';
+      setTimeout(() => {
+        openModal(null, parsed);
+        const toast = document.createElement('div');
+        toast.className = 'fixed top-20 right-4 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-lg z-50 text-sm';
+        toast.innerHTML = `🔖 <b>${pageData.title}</b><br><span class="text-xs opacity-80">페이지에서 자동 추출됨 — 확인하고 저장!</span>`;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 5000);
+      }, 300);
+      window.history.replaceState({}, '', window.location.pathname);
+      return;
+    } catch(e) {
+      console.error('prefill 디코딩 실패', e);
+      alert('북마크릿 데이터 읽기 실패: ' + e.message);
+    }
+  }
+
+  if (params.has('share')) {
+    try {
+      const data = JSON.parse(decodeURIComponent(atob(params.get('share'))));
+      items = data;
+      isShareMode = true;
+      document.getElementById('shareBanner').classList.remove('hidden');
+      document.querySelectorAll('.no-print').forEach(el => {
+        if (el.id !== 'shareBanner' && !el.closest('#shareBanner')) {
+          // 공유 모드: 추가/편집 버튼 숨기기
+        }
+      });
+    } catch(e) { console.error(e); loadLocal(); }
+  } else {
+    loadLocal();
+  }
+
+  // 다크모드
+  if (localStorage.getItem('dark') === '1') document.documentElement.classList.add('dark');
+
+  renderAll();
+
+  // 데이터 날아갔으면 백업 복구 제안
+  setTimeout(() => checkBackupRecovery(), 500);
+}
+
+function loadLocal() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw) items = JSON.parse(raw);
+  else {
+    // 샘플 데이터
+    const today = new Date();
+    items = [
+      {
+        id: id(), company: '무신사', contact: '김매니저', contactInfo: 'kim@musinsa.com',
+        product: '봄 시즌 아우터', title: '봄 코디 룩북 영상',
+        platform: 'youtube', start: dateStr(today), due: dateStr(addDays(today, 7)),
+        status: '진행중', price: 800000, guide: '#무신사 #PR 멘션 필수',
+        link: 'https://musinsa.com', memo: '컨셉: 데일리 캐주얼',
+        checks: {brief:true, product:true, shoot:false, edit:false, approve:false, upload:false, paid:false}
+      },
+      {
+        id: id(), company: '올리브영', contact: '이매니저', contactInfo: '@oliveyoung',
+        product: '쿠션 파운데이션', title: '데일리 메이크업 릴스',
+        platform: 'instagram', start: dateStr(addDays(today,3)), due: dateStr(addDays(today, 10)),
+        status: '예정', price: 350000, guide: '#광고 #올리브영 표기',
+        link: '', memo: '',
+        checks: {brief:true, product:false, shoot:false, edit:false, approve:false, upload:false, paid:false}
+      }
+    ];
+    save();
+  }
+}
+
+function save() {
+  if (isShareMode) return;
+  const json = JSON.stringify(items);
+  localStorage.setItem(STORAGE_KEY, json);
+  // 자동 백업: 최대 5개 버전 유지
+  autoBackup(json);
+}
+
+const BACKUP_PREFIX = 'sponsorship_backup_';
+const MAX_BACKUPS = 5;
+
+function autoBackup(json) {
+  // 데이터가 비었으면 백업 안 함 (실수로 빈 데이터 덮어쓰기 방지)
+  if (!items.length) return;
+  const now = new Date();
+  const key = BACKUP_PREFIX + now.toISOString().slice(0,16).replace(/[T:]/g, '_');
+  // 같은 분(minute) 내 중복 백업 방지
+  const existing = getBackupKeys();
+  if (existing.length && existing[existing.length - 1] === key) return;
+  localStorage.setItem(key, json);
+  // 오래된 백업 정리 (MAX_BACKUPS 개 초과 시)
+  const all = getBackupKeys();
+  while (all.length > MAX_BACKUPS) {
+    localStorage.removeItem(all.shift());
+  }
+}
+
+function getBackupKeys() {
+  const keys = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k.startsWith(BACKUP_PREFIX)) keys.push(k);
+  }
+  return keys.sort();
+}
+
+function checkBackupRecovery() {
+  // 현재 데이터가 비었거나 샘플뿐인데, 백업이 있으면 복구 제안
+  const backups = getBackupKeys();
+  if (backups.length === 0) return;
+  const isSampleOnly = items.length <= 2 && items.some(x => x.company === '무신사' || x.company === '올리브영');
+  if (items.length > 2 && !isSampleOnly) return; // 데이터 있으면 패스
+  // 가장 최근 백업의 데이터 개수 확인
+  const latestKey = backups[backups.length - 1];
+  try {
+    const backupData = JSON.parse(localStorage.getItem(latestKey));
+    if (!Array.isArray(backupData) || backupData.length <= 2) return;
+    // 복구 배너 표시
+    const ts = latestKey.replace(BACKUP_PREFIX, '').replace(/_/g, ' ').replace(' ', 'T').replace(' ', ':');
+    const dateLabel = new Date(ts + ':00').toLocaleString('ko-KR', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+    const banner = document.createElement('div');
+    banner.id = 'recoveryBanner';
+    banner.className = 'fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-blue-600 text-white rounded-2xl shadow-2xl p-4 max-w-md w-[90%] no-print';
+    banner.innerHTML = `
+      <p class="font-bold mb-1">💾 백업 데이터 발견!</p>
+      <p class="text-sm opacity-90 mb-3">${dateLabel} 저장 · ${backupData.length}건의 협찬 데이터</p>
+      <div class="flex gap-2">
+        <button onclick="restoreBackup('${latestKey}')" class="flex-1 bg-white text-blue-600 font-bold py-2 rounded-xl text-sm hover:bg-blue-50">🔄 복구하기</button>
+        <button onclick="showAllBackups()" class="bg-blue-500 text-white font-semibold py-2 px-3 rounded-xl text-sm hover:bg-blue-400">전체 보기</button>
+        <button onclick="this.closest('#recoveryBanner').remove()" class="bg-blue-500 text-white font-semibold py-2 px-3 rounded-xl text-sm hover:bg-blue-400">✕</button>
+      </div>`;
+    document.body.appendChild(banner);
+  } catch(e) { console.error('백업 확인 실패', e); }
+}
+
+function restoreBackup(key) {
+  try {
+    const data = JSON.parse(localStorage.getItem(key));
+    if (!Array.isArray(data)) { alert('백업 데이터 형식 오류'); return; }
+    if (!confirm(`${data.length}건 데이터를 복구할까요?`)) return;
+    items = data;
+    save();
+    renderAll();
+    const banner = document.getElementById('recoveryBanner');
+    if (banner) banner.remove();
+    // 토스트
+    const toast = document.createElement('div');
+    toast.className = 'fixed top-20 right-4 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg z-50 text-sm font-bold';
+    toast.textContent = `✅ ${data.length}건 복구 완료!`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  } catch(e) { alert('복구 실패: ' + e.message); }
+}
+
+function showAllBackups() {
+  const backups = getBackupKeys();
+  if (!backups.length) { alert('백업이 없어요'); return; }
+  let html = '<div class="space-y-2">';
+  backups.slice().reverse().forEach(key => {
+    try {
+      const data = JSON.parse(localStorage.getItem(key));
+      const ts = key.replace(BACKUP_PREFIX, '').replace(/_/g, ' ').replace(' ', 'T').replace(' ', ':');
+      const dateLabel = new Date(ts + ':00').toLocaleString('ko-KR', { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+      html += `<div class="flex items-center justify-between p-3 rounded-xl border border-c">
+        <div>
+          <p class="text-sm font-semibold">${dateLabel}</p>
+          <p class="text-xs text-muted">${data.length}건</p>
+        </div>
+        <button onclick="restoreBackup('${key}')" class="btn-primary px-3 py-1.5 rounded-lg text-xs font-semibold">복구</button>
+      </div>`;
+    } catch(e) {}
+  });
+  html += '</div>';
+  document.getElementById('detailBody').innerHTML = `
+    <h3 class="text-lg font-bold mb-4">💾 백업 히스토리</h3>
+    ${html}
+    <p class="text-xs text-muted mt-4">최대 ${MAX_BACKUPS}개 자동 보관 · 데이터 변경 시마다 저장</p>`;
+  document.getElementById('detailActions').innerHTML = `<button onclick="closeDetail()" class="btn-primary px-4 py-2 rounded-lg text-sm">닫기</button>`;
+  document.getElementById('detailModal').classList.remove('hidden');
+  const banner = document.getElementById('recoveryBanner');
+  if (banner) banner.remove();
+}
+
+function id() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+function dateStr(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+}
+
+function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate()+n); return r; }
+
+function fmtPrice(n) {
+  if (!n) return '-';
+  return '₩' + Number(n).toLocaleString('ko-KR');
+}
+
+function platformLabel(p) {
+  return {youtube:'유튜브', instagram:'인스타그램', tiktok:'틱톡', blog:'블로그', etc:'기타'}[p] || p;
+}
+
+// ===== 필터링 =====
+function safe(s) { return (s||'').toString().replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function getFiltered() {
+  const search = (document.getElementById('search')?.value || '').toLowerCase();
+  const status = document.getElementById('filterStatus')?.value || '';
+  const platform = document.getElementById('filterPlatform')?.value || '';
+  return items.filter(it => {
+    if (status && it.status !== status) return false;
+    if (platform && it.platform !== platform) return false;
+    if (search) {
+      const blob = `${it.company} ${it.product} ${it.title} ${it.memo} ${it.contact}`.toLowerCase();
+      if (!blob.includes(search)) return false;
+    }
+    return true;
+  });
+}
+
+// ===== 통계 =====
+function renderStats() {
+  const now = new Date();
+  const thisMonth = items.filter(it => {
+    const d = new Date(it.due);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  });
+  const active = items.filter(it => it.status === '진행중');
+  const monthRev = thisMonth.filter(it => it.status !== '취소').reduce((a,b)=>a+(+b.price||0),0);
+  const total = items.filter(it => it.status === '완료').reduce((a,b)=>a+(+b.price||0),0);
+
+  document.getElementById('statMonth').textContent = thisMonth.length + '건';
+  document.getElementById('statActive').textContent = active.length + '건';
+  document.getElementById('statRevenue').textContent = '₩' + monthRev.toLocaleString('ko-KR');
+  document.getElementById('statTotal').textContent = '₩' + total.toLocaleString('ko-KR');
+}
+
+// ===== 마감 임박 =====
+function renderUpcoming() {
+  const now = new Date(); now.setHours(0,0,0,0);
+  const week = addDays(now, 7);
+  const up = items.filter(it => {
+    if (it.status === '완료' || it.status === '취소') return false;
+    const d = new Date(it.due);
+    return d >= now && d <= week;
+  }).sort((a,b) => new Date(a.due) - new Date(b.due));
+
+  const box = document.getElementById('upcomingBox');
+  const list = document.getElementById('upcomingList');
+  if (up.length === 0) { box.classList.add('hidden'); return; }
+  box.classList.remove('hidden');
+  list.innerHTML = up.map(it => {
+    const days = Math.ceil((new Date(it.due) - now) / 86400000);
+    const isUrgent = days <= 2;
+    const ddayText = days === 0 ? '🚨 오늘!' : `D-${days}`;
+    return `
+      <div onclick="openDetail('${it.id}')" class="flex items-center justify-between p-2.5 rounded-lg ${isUrgent ? 'bg-red-100/60 dark:bg-red-900/30 hover:bg-red-200/60 dark:hover:bg-red-900/50' : 'hover:bg-white/60 dark:hover:bg-gray-800/60'} cursor-pointer transition-colors">
+        <div class="flex items-center gap-2">
+          ${itemThumb(it, 7)}
+          <span class="chip chip-${it.platform}">${platformLabel(it.platform)}</span>
+          <span class="font-bold text-sm">${it.company}</span>
+          <span class="text-sm text-muted truncate max-w-[200px]">${it.title || it.product || ''}</span>
+        </div>
+        <div class="flex items-center gap-3 flex-shrink-0">
+          ${it.contact ? `<span class="text-xs text-muted hidden sm:inline">${it.contact}</span>` : ''}
+          <span class="dday-badge ${isUrgent ? 'dday-urgent' : 'dday-warn'}">${ddayText}</span>
+          <span class="text-[10px] text-muted">${it.due}</span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ===== 캘린더 =====
+function renderCalendar() {
+  const y = currentDate.getFullYear();
+  const m = currentDate.getMonth();
+  document.getElementById('calTitle').textContent = `${y}년 ${m+1}월`;
+
+  const firstDay = new Date(y, m, 1);
+  const startDay = firstDay.getDay();
+  const daysInMonth = new Date(y, m+1, 0).getDate();
+  const prevDays = new Date(y, m, 0).getDate();
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const filtered = getFiltered();
+
+  let html = '';
+  // 이전달
+  for (let i = startDay - 1; i >= 0; i--) {
+    html += `<div class="cal-day other-month"><div class="num text-muted">${prevDays - i}</div></div>`;
+  }
+  // 이번달
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(y, m, d);
+    const ds = dateStr(date);
+    const isToday = date.getTime() === today.getTime();
+    const dayItems = filtered.filter(it => {
+      const start = it.start || it.due;
+      return ds >= start && ds <= it.due;
+    }).map(it => {
+      const startDate = it.start || it.due;
+      return { ...it, isStart: ds === startDate, isEnd: ds === it.due, isMiddle: ds !== startDate && ds !== it.due };
+    });
+    const visible = dayItems.slice(0, 4);
+    const overflow = dayItems.length - 4;
+    html += `<div class="cal-day ${isToday ? 'today' : ''}" onclick="quickAdd('${ds}')">
+      <div class="num">${d}</div>
+      ${visible.map(it => {
+        if (it.isMiddle) {
+          return `<div class="cal-bar cal-bar-${it.platform}" onclick="event.stopPropagation(); openDetail('${it.id}')" title="${it.company} - ${it.title||''}"></div>`;
+        }
+        const prefix = it.isStart && !it.isEnd ? '▶ ' : (it.isEnd && !it.isStart ? '🏁 ' : '');
+        return `<span class="chip chip-${it.platform}" onclick="event.stopPropagation(); openDetail('${it.id}')" title="${it.company} - ${it.title||''}">${prefix}${it.company}</span>`;
+      }).join('')}
+      ${overflow > 0 ? `<span class="text-xs text-muted">+${overflow}</span>` : ''}
+    </div>`;
+  }
+  // 다음달
+  const total = startDay + daysInMonth;
+  const remaining = (7 - (total % 7)) % 7;
+  for (let i = 1; i <= remaining; i++) {
+    html += `<div class="cal-day other-month"><div class="num text-muted">${i}</div></div>`;
+  }
+  document.getElementById('calBody').innerHTML = html;
+}
+
+function changeMonth(delta) {
+  currentDate.setMonth(currentDate.getMonth() + delta);
+  renderCalendar();
+}
+
+function goToday() { currentDate = new Date(); renderCalendar(); }
+
+function goHome() {
+  // 모든 모달 닫기
+  ['modal','detailModal','parseModal','bookmarkletModal'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('hidden');
+  });
+  // 검색 + 필터 리셋
+  const s = document.getElementById('search'); if (s) s.value = '';
+  const fs = document.getElementById('filterStatus'); if (fs) fs.value = '';
+  const fp = document.getElementById('filterPlatform'); if (fp) fp.value = '';
+  const fc = document.getElementById('filterCaptionStatus'); if (fc) fc.value = '';
+  // 캘린더 뷰 + 오늘
+  currentDate = new Date();
+  switchView('calendar');
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+// ===== 담당자 필터 (리스트 + 캡션 공용) =====
+let listContactFilter = '';
+let captionContactFilter = '';
+
+function buildContactTabs(targetId, allItems, currentFilter, onClickFn) {
+  const el = document.getElementById(targetId);
+  if (!el) return;
+  const contacts = new Set();
+  allItems.forEach(it => { if (it.contact && !/^[\s\-_.?]+$/.test(it.contact)) contacts.add(it.contact); });
+  const arr = [...contacts].sort();
+  el.innerHTML = `
+    <button onclick="${onClickFn}='';renderAll()" class="px-3 py-1.5 rounded-full text-xs font-bold border border-c transition-all ${!currentFilter ? 'kanban-tab-active' : ''}" style="${!currentFilter ? '' : 'background:var(--card)'}">
+      전체 (${allItems.length})
+    </button>
+    ${arr.map(c => {
+      const cnt = allItems.filter(it => it.contact === c).length;
+      const active = currentFilter === c;
+      return `<button onclick="${onClickFn}='${c.replace(/'/g,"\\'")}';renderAll()" class="px-3 py-1.5 rounded-full text-xs font-bold border border-c transition-all ${active ? 'kanban-tab-active' : ''}" style="${active ? '' : 'background:var(--card)'}">
+        ${c} (${cnt})
+      </button>`;
+    }).join('')}
+  `;
+}
+
+// ===== 리스트 =====
+function renderList() {
+  const base = getFiltered().sort((a,b) => new Date(a.due) - new Date(b.due));
+  buildContactTabs('listContactTabs', base, listContactFilter, 'listContactFilter');
+  const filtered = listContactFilter ? base.filter(it => it.contact === listContactFilter) : base;
+  const tbody = document.getElementById('listBody');
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-12 text-muted">협찬 데이터가 없어요. <button onclick="openModal()" class="underline">+ 추가하기</button></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = filtered.map(it => `
+    <tr class="border-t border-c hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer" onclick="openDetail('${it.id}')">
+      <td class="px-4 py-3">
+        <div class="flex items-center gap-3">
+          ${itemThumb(it, 9)}
+          <div>
+            <div class="font-semibold">${it.company}</div>
+            <div class="text-xs text-muted truncate max-w-[150px]">${it.title || it.product || ''}</div>
+          </div>
+        </div>
+      </td>
+      <td class="px-4 py-3" onclick="event.stopPropagation()">
+        <select class="text-sm bg-transparent border-0 outline-none cursor-pointer w-full max-w-[120px] text-inherit hover:text-pink-500 transition-colors"
+          onchange="updateContact('${it.id}', this.value)"
+          onfocus="populateContactOptions(this, '${it.id}')">
+          <option value="${safe(it.contact || '')}" selected>${it.contact || '선택'}</option>
+        </select>
+      </td>
+      <td class="px-4 py-3"><span class="chip chip-${it.platform}">${platformLabel(it.platform)}</span></td>
+      <td class="px-4 py-3 text-sm">${it.due}</td>
+      <td class="px-4 py-3"><span class="badge badge-${it.status}">${it.status}</span></td>
+      <td class="px-4 py-3 text-right font-semibold">${fmtPrice(it.price)}</td>
+      <td class="px-4 py-3 text-right no-print">
+        <button onclick="event.stopPropagation(); openModal('${it.id}')" class="text-muted hover:opacity-70">✏️</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// ===== 캡션 모음 =====
+function renderCaption() {
+  const statusFilter = document.getElementById('filterCaptionStatus')?.value || '';
+  const search = (document.getElementById('search')?.value || '').toLowerCase();
+  const baseList = items.filter(it => {
+    if (statusFilter && it.status !== statusFilter) return false;
+    if (search) {
+      const blob = `${it.company} ${it.product} ${it.title} ${it.memo} ${it.contact}`.toLowerCase();
+      if (!blob.includes(search)) return false;
+    }
+    return true;
+  }).sort((a,b) => new Date(a.due) - new Date(b.due));
+  buildContactTabs('captionContactTabs', baseList, captionContactFilter, 'captionContactFilter');
+  const list = captionContactFilter ? baseList.filter(it => it.contact === captionContactFilter) : baseList;
+
+  const body = document.getElementById('captionBody');
+  if (list.length === 0) {
+    body.innerHTML = `<div class="col-span-2 text-center py-12 text-muted">협찬 데이터가 없어요. <button onclick="openModal()" class="underline">+ 추가하기</button></div>`;
+    return;
+  }
+
+  const safe = s => (s||'').toString().replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]));
+
+  body.innerHTML = list.map(it => {
+    const caption = generateCaption(it);
+    const periodText = it.start ? `${it.start} ~ ${it.due}` : it.due;
+    const checksDone = Object.values(it.checks||{}).filter(Boolean).length;
+    const checksTotal = 7;
+    const pct = (checksDone / checksTotal * 100).toFixed(0);
+    return `
+      <div class="card rounded-2xl overflow-hidden flex flex-col">
+        <!-- 카드 헤더 -->
+        <div class="p-4 border-b border-c flex items-start gap-3">
+          ${(it.thumbnail || it.imageUrl) ? `<img src="${safe(it.thumbnail || it.imageUrl)}" alt="" class="w-12 h-12 rounded-xl object-cover flex-shrink-0 border border-c" onerror="this.style.display='none'">` : contactAvatar(it.contact, 12, true)}
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap mb-1">
+              <span class="chip chip-${it.platform}">${platformLabel(it.platform)}</span>
+              <span class="badge badge-${it.status}">${it.status}</span>
+              ${(it.thumbnail || it.imageUrl) ? contactAvatar(it.contact, 6, true) : ''}
+            </div>
+            <p class="font-bold truncate">${safe(it.company)}</p>
+            <p class="text-xs text-muted truncate">${safe(it.title || it.product || '-')} · ${periodText}</p>
+          </div>
+          <button onclick="openDetail('${it.id}')" class="flex-shrink-0 card px-2 py-1 rounded-lg text-xs text-muted hover:opacity-80">상세 ↗</button>
+        </div>
+
+        <!-- 캡션 박스 -->
+        <div class="flex-1 p-4 bg-gradient-to-br from-pink-50 to-purple-50 dark:from-pink-950 dark:to-purple-950">
+          ${(function() {
+            const ranges = getPartRanges(it);
+            if (ranges.length > 0) {
+              // 편별 캡션 탭
+              return ranges.map(r => {
+                const pCaption = generatePartCaption(it, r.part);
+                const partPL = getPartProductList(it, r.from, r.to);
+                return `<div class="mb-3 ${r.part > 1 ? 'pt-3 border-t border-pink-200 dark:border-pink-800' : ''}">
+                  <div class="flex items-center justify-between mb-2">
+                    <p class="text-xs font-semibold"><span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-pink-500 text-white mr-1">${r.part}편</span> LOOK ${r.from+1}~${r.to+1}</p>
+                    <div class="flex items-center gap-1.5">
+                      <span id="captionSaved_part_${it.id}_${r.part}" class="text-xs text-muted opacity-40 transition-opacity">${it.partCaptions?.[String(r.part)] ? '✨ 저장됨' : ''}</span>
+                      <button onclick="copyPartCaption('${it.id}',${r.part})" class="bg-black text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:opacity-80">📋 복사</button>
+                    </div>
+                  </div>
+                  ${extractLookLinks(partPL, pCaption)}
+                  <textarea id="captionBox_part_${it.id}_${r.part}" oninput="savePartCaption('${it.id}',${r.part},this.value)" class="w-full p-3 rounded-xl text-xs font-sans border border-c bg-white dark:bg-gray-900 resize-none" rows="7" ${isShareMode ? 'readonly' : ''}>${safe(pCaption)}</textarea>
+                </div>`;
+              }).join('');
+            } else {
+              // 단일 캡션 (기존)
+              return `<div class="flex items-center justify-between mb-2">
+                <p class="text-xs font-semibold text-muted">📋 캡션</p>
+                <div class="flex items-center gap-1.5">
+                  <span id="captionSaved_cap_${it.id}" class="text-xs text-muted opacity-40 transition-opacity">${it.customCaption ? '✨ 저장됨' : ''}</span>
+                  ${!isShareMode ? `
+                    <button onclick="manualFormatCaption('cap_${it.id}')" class="card px-2 py-1 rounded-lg text-xs" title="LOOK 1/2/3... 자동 정리">🪄</button>
+                    <button onclick="resetCaptionById('${it.id}', 'cap')" class="card px-2 py-1 rounded-lg text-xs" title="자동 생성으로 되돌리기">🔄</button>
+                  ` : ''}
+                  <button id="copyCaptionBtn_${it.id}" onclick="copyCaptionById('${it.id}')" class="bg-black text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:opacity-80">📋 복사</button>
+                </div>
+              </div>
+              ${extractLookLinks(it.productList, caption)}
+              <div class="flex gap-3">
+                ${(it.thumbnail || it.imageUrl) ? `<div class="flex-shrink-0"><img src="${safe(it.thumbnail || it.imageUrl)}" alt="" class="w-20 h-20 rounded-xl object-cover border border-c" onerror="this.parentElement.style.display='none'"></div>` : ''}
+                <textarea id="captionBox_cap_${it.id}" oninput="saveCustomCaptionById('${it.id}', this.value)" onpaste="handleCaptionPasteById(event, '${it.id}')" class="flex-1 w-full p-3 rounded-xl text-xs font-sans border border-c bg-white dark:bg-gray-900 resize-none" rows="9" ${isShareMode ? 'readonly' : ''}>${safe(caption)}</textarea>
+              </div>`;
+            }
+          })()}
+        </div>
+
+        <!-- 진행도 바 -->
+        <div class="px-4 py-2 border-t border-c flex items-center gap-3">
+          <div class="flex-1 bg-gray-200 dark:bg-gray-800 rounded-full h-1.5 overflow-hidden">
+            <div class="bg-green-500 h-full rounded-full" style="width:${pct}%"></div>
+          </div>
+          <span class="text-xs text-muted flex-shrink-0">${checksDone}/${checksTotal} 완료</span>
+          ${it.couponCode ? `<span class="text-xs bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 px-2 py-0.5 rounded-full font-mono">${safe(it.couponCode)}</span>` : ''}
+          ${!isShareMode ? `<button onclick="event.stopPropagation();deleteItem('${it.id}')" class="text-[10px] text-red-400 hover:text-red-600 ml-auto flex-shrink-0" title="삭제">🗑️</button>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// 캡션 탭 전용 copy / save / reset / paste 핸들러
+function copyPartCaption(itemId, partNum) {
+  const ta = document.getElementById('captionBox_part_' + itemId + '_' + partNum);
+  const it = items.find(x => x.id === itemId);
+  const text = ta ? ta.value : (it ? generatePartCaption(it, partNum) : '');
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = ta?.parentElement?.parentElement?.querySelector('[onclick*="copyPartCaption"]');
+    if (btn) { const o = btn.innerHTML; btn.innerHTML = '✅ 복사됨!'; btn.style.background = '#16a34a'; setTimeout(() => { btn.innerHTML = o; btn.style.background = ''; }, 1800); }
+  });
+}
+
+function savePartCaption(itemId, partNum, text) {
+  const it = items.find(x => x.id === itemId);
+  if (!it) return;
+  if (!it.partCaptions) it.partCaptions = {};
+  it.partCaptions[String(partNum)] = text;
+  save();
+  const el = document.getElementById('captionSaved_part_' + itemId + '_' + partNum);
+  if (el) { el.textContent = '✨ 저장됨'; el.style.opacity = '1'; clearTimeout(el._t); el._t = setTimeout(() => { el.style.opacity = '0.4'; }, 1500); }
+}
+
+function copyCaptionById(itemId) {
+  const ta = document.getElementById('captionBox_cap_' + itemId) || document.getElementById('captionBox_' + itemId);
+  const it = items.find(x => x.id === itemId);
+  const text = ta ? ta.value : (it ? generateCaption(it) : '');
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyCaptionBtn_' + itemId);
+    if (btn) { const o = btn.innerHTML; btn.innerHTML = '✅ 복사됨!'; btn.style.background = '#16a34a'; setTimeout(() => { btn.innerHTML = o; btn.style.background = ''; }, 1800); }
+  });
+}
+
+function saveCustomCaptionById(itemId, text) {
+  const it = items.find(x => x.id === itemId);
+  if (!it) return;
+  it.customCaption = text;
+  save();
+  ['captionSaved_cap_'+itemId, 'captionSaved_'+itemId].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = '✨ 저장됨'; el.style.opacity = '1'; clearTimeout(el._t); el._t = setTimeout(() => { el.style.opacity = '0.4'; }, 1500); }
+  });
+}
+
+function resetCaptionById(itemId, prefix) {
+  const it = items.find(x => x.id === itemId);
+  if (!it) return;
+  if (!confirm('직접 수정한 캡션을 지우고 자동 생성으로 되돌릴까요?')) return;
+  delete it.customCaption;
+  save();
+  const newCaption = generateCaption(it);
+  // 상세모달 캡션 (captionClean_), 캡션탭 (captionBox_ / captionBox_cap_)
+  const ids = ['captionClean_' + itemId, 'captionBox_' + (prefix ? prefix+'_' : '') + itemId];
+  ids.forEach(id => { const ta = document.getElementById(id); if (ta) ta.value = newCaption; });
+  // LOOK 에디터도 갱신
+  refreshLookEditor(itemId);
+}
+
+function handleCaptionPasteById(e, itemId) {
+  const pasted = (e.clipboardData || window.clipboardData).getData('text');
+
+  // SHEIN 브리핑 감지 → 아이템 필드 업데이트 + 캡션 재생성 + 가격 팝업
+  const brief = parseSHEINBrief(pasted);
+  if (brief) {
+    e.preventDefault();
+    const it = items.find(x => x.id === itemId);
+    if (it) {
+      if (brief.searchKeywords) it.searchKeywords = brief.searchKeywords;
+      if (brief.couponCode) it.couponCode = brief.couponCode;
+      if (brief.guide) it.guide = brief.guide;
+      if (brief.productList) it.productList = brief.productList;
+      if (!it.company || it.company === '무신사' || it.company === '올리브영') it.company = 'SHEIN';
+      delete it.customCaption;
+      save();
+      const ta = e.target;
+      ta.value = generateCaption(it);
+      renderAll();
+      // 토스트
+      const toast = document.createElement('div');
+      toast.className = 'fixed top-4 left-1/2 -translate-x-1/2 z-[999] bg-green-600 text-white px-5 py-3 rounded-xl shadow-2xl text-sm font-bold';
+      toast.innerHTML = `✅ SHEIN 파싱 완료! (${brief.lookCount}개 LOOK) 가격 입력 ↓`;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+      // 가격 팝업
+      if (brief.lookCount > 0) showPriceInputPopup(brief, itemId);
+    }
+    return;
+  }
+
+  const formatted = autoFormatProductList(pasted);
+  if (!formatted) return;
+  e.preventDefault();
+  const ta = e.target;
+  const s = ta.selectionStart, en = ta.selectionEnd;
+  ta.value = ta.value.slice(0, s) + formatted + ta.value.slice(en);
+  ta.selectionStart = ta.selectionEnd = s + formatted.length;
+  saveCustomCaptionById(itemId, ta.value);
+  ['captionSaved_cap_'+itemId].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = '🪄 자동 정리됨!'; el.style.opacity = '1'; setTimeout(() => { el.style.opacity = '0.4'; }, 2500); }
+  });
+}
+
+// ===== 상황판 (칸반) =====
+const KANBAN_COLS = [
+  { key: 'received', label: '접수', icon: '📥', desc: '브리핑 전/접수' },
+  { key: 'production', label: '제작중', icon: '🎬', desc: '촬영·편집' },
+  { key: 'confirm', label: '컨펌대기', icon: '👀', desc: '업체 확인 대기' },
+  { key: 'upload', label: '발행', icon: '📤', desc: '업로드 준비/완료' },
+  { key: 'payment', label: '정산', icon: '💰', desc: '정산 대기' },
+  { key: 'done', label: '완료', icon: '✅', desc: '모두 완료' },
+];
+
+function getKanbanStage(it) {
+  const c = it.checks || {};
+  if (it.status === '취소') return 'done';
+  if (c.paid) return 'done';
+  if (c.upload) return 'payment';
+  if (c.approve) return 'upload';
+  if (c.edit || c.shoot) return 'confirm';
+  if (c.product || c.brief) return 'production';
+  return 'received';
+}
+
+// 칸반 단계 이동 시 체크리스트 자동 업데이트
+function setKanbanStage(itemId, newStage) {
+  const it = items.find(x => x.id === itemId);
+  if (!it) return;
+  if (!it.checks) it.checks = {};
+  const stages = {
+    received:   { brief: false, product: false, shoot: false, edit: false, approve: false, upload: false, paid: false },
+    production: { brief: true, product: true, shoot: false, edit: false, approve: false, upload: false, paid: false },
+    confirm:    { brief: true, product: true, shoot: true, edit: true, approve: false, upload: false, paid: false },
+    upload:     { brief: true, product: true, shoot: true, edit: true, approve: true, upload: false, paid: false },
+    payment:    { brief: true, product: true, shoot: true, edit: true, approve: true, upload: true, paid: false },
+    done:       { brief: true, product: true, shoot: true, edit: true, approve: true, upload: true, paid: true },
+  };
+  const checks = stages[newStage];
+  if (checks) {
+    it.checks = { ...checks };
+    // 상태도 자동 업데이트
+    if (newStage === 'done') it.status = '완료';
+    else if (newStage === 'received') it.status = '예정';
+    else it.status = '진행중';
+  }
+  save();
+  renderKanban();
+  renderStats();
+}
+
+let kanbanContactFilter = '';
+let kanbanDragId = null;
+
+function renderKanban() {
+  const filtered = getFiltered().filter(it => it.status !== '취소');
+  // 담당자 탭
+  const contacts = new Set();
+  filtered.forEach(it => { if (it.contact && !/^[\s\-_.?]+$/.test(it.contact)) contacts.add(it.contact); });
+  const contactArr = [...contacts].sort();
+  const tabsEl = document.getElementById('kanbanContactTabs');
+  tabsEl.innerHTML = `
+    <button onclick="kanbanContactFilter='';renderKanban()" class="px-3 py-1.5 rounded-full text-xs font-bold border border-c transition-all ${!kanbanContactFilter ? 'kanban-tab-active' : 'hover:opacity-70'}" style="${!kanbanContactFilter ? '' : 'background:var(--card)'}">
+      전체 (${filtered.length})
+    </button>
+    ${contactArr.map(c => {
+      const cnt = filtered.filter(it => it.contact === c).length;
+      const active = kanbanContactFilter === c;
+      return `<button onclick="kanbanContactFilter='${c.replace(/'/g,"\\'")}';renderKanban()" class="px-3 py-1.5 rounded-full text-xs font-bold border border-c transition-all ${active ? 'kanban-tab-active' : 'hover:opacity-70'}" style="${active ? '' : 'background:var(--card)'}">
+        ${c} (${cnt})
+      </button>`;
+    }).join('')}
+  `;
+
+  const list = kanbanContactFilter ? filtered.filter(it => it.contact === kanbanContactFilter) : filtered;
+
+  // 칼럼별 분류
+  const buckets = {};
+  KANBAN_COLS.forEach(col => buckets[col.key] = []);
+  list.forEach(it => {
+    const stage = getKanbanStage(it);
+    if (buckets[stage]) buckets[stage].push(it);
+    else buckets['received'].push(it);
+  });
+
+  const board = document.getElementById('kanbanBoard');
+  board.innerHTML = KANBAN_COLS.map(col => {
+    const cards = buckets[col.key];
+    return `
+    <div class="kanban-col col-${col.key}">
+      <div class="kanban-col-header">
+        <span>${col.icon} ${col.label}</span>
+        <span class="text-xs opacity-70 font-normal">${cards.length}</span>
+      </div>
+      <div class="kanban-col-body" data-stage="${col.key}"
+        ondragover="event.preventDefault();this.classList.add('drag-over')"
+        ondragleave="this.classList.remove('drag-over')"
+        ondrop="this.classList.remove('drag-over');kanbanDrop(event,'${col.key}')">
+        ${cards.length === 0 ? `<div class="text-center text-[10px] text-muted py-4 opacity-50">${col.desc}</div>` : ''}
+        ${cards.map(it => kanbanCardHtml(it)).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function kanbanCardHtml(it) {
+  const c = it.checks || {};
+  const checksTotal = 7;
+  const checksDone = [c.brief, c.product, c.shoot, c.edit, c.approve, c.upload, c.paid].filter(Boolean).length;
+  const pct = Math.round(checksDone / checksTotal * 100);
+  const dueDate = it.due ? new Date(it.due) : null;
+  const now = new Date();
+  const daysLeft = dueDate ? Math.ceil((dueDate - now) / 86400000) : null;
+  const dueClass = daysLeft !== null && daysLeft <= 3 ? (daysLeft < 0 ? 'text-red-600 font-bold' : 'text-orange-500 font-semibold') : 'text-muted';
+  const dueText = daysLeft !== null ? (daysLeft < 0 ? `D+${Math.abs(daysLeft)}` : daysLeft === 0 ? 'D-Day' : `D-${daysLeft}`) : '';
+
+  const platformIcons = { youtube: '🎬', instagram: '📸', tiktok: '🎵', blog: '📝', etc: '📌' };
+  const platformIcon = platformIcons[it.platform] || '📌';
+
+  return `
+  <div class="kanban-card bg-white dark:bg-gray-900" draggable="true"
+    data-item-id="${it.id}"
+    ondragstart="kanbanDragId='${it.id}';this.classList.add('dragging')"
+    ondragend="this.classList.remove('dragging');kanbanDragId=null"
+    onclick="openDetail('${it.id}')">
+    <!-- 상단: 플랫폼 + 마감일 -->
+    <div class="flex items-center justify-between mb-1.5">
+      <span class="text-[10px] font-semibold">${platformIcon} ${it.company || ''}</span>
+      ${dueText ? `<span class="text-[10px] ${dueClass}">${dueText}</span>` : ''}
+    </div>
+    <!-- 제목 -->
+    ${it.title ? `<p class="text-[11px] font-bold leading-snug mb-1.5 line-clamp-2">${it.title}</p>` : ''}
+    ${it.product ? `<p class="text-[10px] text-muted truncate mb-1">${it.product}</p>` : ''}
+    <!-- 진행률 바 -->
+    <div class="flex items-center gap-1.5 mb-1">
+      <div class="flex-1 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+        <div class="h-full rounded-full transition-all" style="width:${pct}%; background: ${pct >= 100 ? '#10b981' : pct >= 50 ? '#f59e0b' : 'var(--accent)'}"></div>
+      </div>
+      <span class="text-[9px] text-muted">${checksDone}/${checksTotal}</span>
+    </div>
+    <!-- 하단: 담당자 선택 + 마감일 -->
+    <div class="flex items-center justify-between mt-1.5">
+      <div class="relative" onclick="event.stopPropagation()">
+        <button onclick="toggleContactPicker('${it.id}',this)" class="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold border transition-colors ${it.contact ? `${getContactStyle(it.contact).border} ${getContactStyle(it.contact).bg} ${getContactStyle(it.contact).text}` : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-muted hover:border-gray-400'}">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M5 20c0-4 3.5-7 7-7s7 3 7 7"/></svg>
+          ${it.contact || '담당 지정'}
+        </button>
+      </div>
+      <div class="flex items-center gap-2">
+        ${it.fee ? `<span class="text-[10px] font-bold">₩${Number(it.fee).toLocaleString('ko-KR')}</span>` : ''}
+        ${it.due ? `<span class="text-[9px] text-muted">📅 ${it.due}</span>` : ''}
+      </div>
+    </div>
+  </div>`;
+}
+
+const CONTACT_LIST = [
+  { name: '김남령', bg: 'bg-violet-50 dark:bg-violet-950', border: 'border-violet-300 dark:border-violet-700', text: 'text-violet-600 dark:text-violet-300', dot: 'bg-violet-500' },
+  { name: '김윤녕', bg: 'bg-teal-50 dark:bg-teal-950', border: 'border-teal-300 dark:border-teal-700', text: 'text-teal-600 dark:text-teal-300', dot: 'bg-teal-500' },
+];
+function getContactStyle(name) {
+  return CONTACT_LIST.find(c => c.name === name) || { bg:'bg-gray-50 dark:bg-gray-800', border:'border-gray-300 dark:border-gray-600', text:'text-muted', dot:'bg-gray-400' };
+}
+let _contactPickerOpen = null;
+
+function toggleContactPicker(itemId, btn) {
+  // 기존 picker 닫기
+  document.querySelectorAll('.contact-picker-dropdown').forEach(el => el.remove());
+  if (_contactPickerOpen === itemId) { _contactPickerOpen = null; return; }
+  _contactPickerOpen = itemId;
+
+  const it = items.find(x => x.id === itemId);
+  const dd = document.createElement('div');
+  dd.className = 'contact-picker-dropdown absolute left-0 top-full mt-1 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 py-1 min-w-[120px]';
+  dd.innerHTML = CONTACT_LIST.map(c =>
+    `<button onclick="event.stopPropagation();assignContact('${itemId}','${c.name}')"
+      class="w-full text-left px-3 py-1.5 text-[11px] font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 ${it && it.contact === c.name ? c.text : ''}">
+      <span class="w-2.5 h-2.5 rounded-full ${c.dot} shrink-0"></span>
+      ${it && it.contact === c.name ? '✓ ' : ''}${c.name}
+    </button>`
+  ).join('') + `<button onclick="event.stopPropagation();assignContact('${itemId}','')"
+    class="w-full text-left px-3 py-1.5 text-[11px] text-muted hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-t border-gray-100 dark:border-gray-700">
+    ✕ 지정 해제
+  </button>`;
+  btn.parentElement.appendChild(dd);
+
+  // 바깥 클릭 시 닫기
+  setTimeout(() => {
+    const close = (e) => { if (!dd.contains(e.target)) { dd.remove(); _contactPickerOpen = null; document.removeEventListener('click', close); } };
+    document.addEventListener('click', close);
+  }, 10);
+}
+
+function assignContact(itemId, name) {
+  const it = items.find(x => x.id === itemId);
+  if (!it) return;
+  it.contact = name;
+  save();
+  document.querySelectorAll('.contact-picker-dropdown').forEach(el => el.remove());
+  _contactPickerOpen = null;
+  renderKanban();
+}
+
+function kanbanDrop(e, newStage) {
+  e.preventDefault();
+  if (!kanbanDragId) return;
+  const currentStage = getKanbanStage(items.find(x => x.id === kanbanDragId));
+  if (currentStage === newStage) return;
+  setKanbanStage(kanbanDragId, newStage);
+  kanbanDragId = null;
+}
+
+// ===== 업체별 =====
+function renderCompanies() {
+  const filtered = getFiltered();
+  const groups = {};
+  filtered.forEach(it => {
+    if (!groups[it.company]) groups[it.company] = [];
+    groups[it.company].push(it);
+  });
+  const body = document.getElementById('companiesBody');
+  const keys = Object.keys(groups);
+  if (keys.length === 0) {
+    body.innerHTML = `<div class="col-span-2 text-center py-12 text-muted">데이터가 없어요</div>`;
+    return;
+  }
+  body.innerHTML = keys.sort().map(co => {
+    const list = groups[co];
+    const total = list.reduce((a,b) => a + (+b.price || 0), 0);
+    return `
+      <div class="card rounded-xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-3">
+            ${list[0] ? itemThumb(list[0], 10) : ''}
+            <div>
+              <h3 class="font-bold">${co}</h3>
+              <p class="text-xs text-muted">${list.length}건 · 누적 ${fmtPrice(total)}</p>
+            </div>
+          </div>
+        </div>
+        <div class="space-y-2">
+          ${list.map(it => `
+            <div onclick="openDetail('${it.id}')" class="flex items-center justify-between p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer">
+              <div class="flex items-center gap-2 min-w-0">
+                ${itemThumb(it, 6)}
+                <span class="chip chip-${it.platform}">${platformLabel(it.platform)}</span>
+                <span class="text-sm truncate">${it.title || it.product || '-'}</span>
+              </div>
+              <div class="flex items-center gap-2 flex-shrink-0">
+                <span class="text-xs text-muted">${it.due}</span>
+                <span class="badge badge-${it.status}">${it.status}</span>
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ===== 뷰 전환 =====
+function switchView(v) {
+  currentView = v;
+  ['calendar','list','companies','caption','kanban','prompts','links'].forEach(name => {
+    const el = document.getElementById('view' + name.charAt(0).toUpperCase()+name.slice(1));
+    if (el) el.classList.toggle('hidden', name !== v);
+    const tab = document.getElementById('tab' + name.charAt(0).toUpperCase()+name.slice(1));
+    if (tab && !tab.classList.contains('hidden')) {
+      if (name === v) { tab.classList.add('btn-primary'); tab.classList.remove('card'); }
+      else { tab.classList.remove('btn-primary'); tab.classList.add('card'); }
+    }
+  });
+  renderAll();
+}
+
+function renderAll() {
+  renderStats();
+  renderUpcoming();
+  if (currentView === 'calendar') renderCalendar();
+  else if (currentView === 'list') renderList();
+  else if (currentView === 'caption') renderCaption();
+  else if (currentView === 'kanban') renderKanban();
+  else if (currentView === 'prompts') renderPrompts();
+  else if (currentView === 'links') renderLinks();
+  else renderCompanies();
+}
+
+// ===== 프롬프트 관리 =====
+const PROMPT_KEY = 'sponsorship_prompts_v1';
+function loadPrompts() { try { return JSON.parse(localStorage.getItem(PROMPT_KEY)) || []; } catch(e) { return []; } }
+function savePrompts(list) { localStorage.setItem(PROMPT_KEY, JSON.stringify(list)); }
+
+function renderPrompts() {
+  const list = loadPrompts();
+  const el = document.getElementById('promptList');
+  if (list.length === 0) {
+    el.innerHTML = `<div class="card rounded-xl p-8 text-center">
+      <p class="text-3xl opacity-30 mb-2">💬</p>
+      <p class="text-sm text-muted">저장된 프롬프트가 없어요</p>
+      <p class="text-xs text-muted mt-1">+ 추가 버튼으로 자주 쓰는 프롬프트를 저장하세요</p>
+    </div>`;
+    return;
+  }
+  el.innerHTML = list.map((p, i) => `
+    <div class="card rounded-xl p-4 group">
+      <div class="flex items-start justify-between gap-2 mb-2">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-bold px-2 py-0.5 rounded-full" style="background:${p.color || '#f3f4f6'}">${p.label || '일반'}</span>
+          <span class="text-sm font-bold">${safe(p.title)}</span>
+        </div>
+        <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button onclick="editPrompt(${i})" class="px-2 py-1 rounded-lg text-[10px] hover:bg-gray-100 dark:hover:bg-gray-800">✏️</button>
+          <button onclick="deletePrompt(${i})" class="px-2 py-1 rounded-lg text-[10px] hover:bg-red-50 dark:hover:bg-red-900/30 text-red-500">🗑️</button>
+        </div>
+      </div>
+      <pre class="text-xs whitespace-pre-wrap leading-relaxed text-muted bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 max-h-40 overflow-y-auto">${safe(p.content)}</pre>
+      <button onclick="copyPromptText(${i})" class="mt-2 px-3 py-1.5 rounded-lg text-[10px] font-bold bg-black text-white hover:opacity-80 transition-opacity">📋 복사</button>
+    </div>
+  `).join('');
+}
+
+function addPrompt() {
+  const title = prompt('프롬프트 제목:');
+  if (!title) return;
+  const content = prompt('프롬프트 내용:');
+  if (!content) return;
+  const labels = [
+    { label: '캡션', color: '#dbeafe' },
+    { label: '영상', color: '#fce7f3' },
+    { label: '이미지', color: '#d1fae5' },
+    { label: '일반', color: '#f3f4f6' },
+  ];
+  const labelIdx = parseInt(prompt('라벨 선택 (0:캡션 1:영상 2:이미지 3:일반):', '0')) || 0;
+  const sel = labels[Math.min(labelIdx, 3)];
+  const list = loadPrompts();
+  list.push({ title, content, label: sel.label, color: sel.color, ts: Date.now() });
+  savePrompts(list);
+  renderPrompts();
+}
+
+function editPrompt(idx) {
+  const list = loadPrompts();
+  const p = list[idx];
+  if (!p) return;
+  const title = prompt('제목:', p.title);
+  if (title === null) return;
+  const content = prompt('내용:', p.content);
+  if (content === null) return;
+  p.title = title;
+  p.content = content;
+  savePrompts(list);
+  renderPrompts();
+}
+
+function deletePrompt(idx) {
+  if (!confirm('이 프롬프트를 삭제할까요?')) return;
+  const list = loadPrompts();
+  list.splice(idx, 1);
+  savePrompts(list);
+  renderPrompts();
+}
+
+function copyPromptText(idx) {
+  const list = loadPrompts();
+  const p = list[idx];
+  if (!p) return;
+  navigator.clipboard.writeText(p.content).then(() => {
+    const btn = document.querySelectorAll('#promptList .card')[idx]?.querySelector('button:last-child');
+    if (btn) { btn.textContent = '✅ 복사됨!'; setTimeout(() => btn.textContent = '📋 복사', 1500); }
+  });
+}
+
+// ===== 공유 링크 =====
+function renderLinks() {
+  const filtered = items.filter(it => it.status !== '취소' && it.productList);
+  const el = document.getElementById('linkList');
+
+  // 룩북 기본 링크
+  let html = `
+    <div class="card rounded-xl p-4">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <p class="text-sm font-bold">🎀 룩북 페이지</p>
+          <p class="text-[10px] text-muted">팔로워에게 공유하는 메인 룩북</p>
+        </div>
+        <button onclick="copyLinkText('lookbook.html')" class="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-black text-white hover:opacity-80">📋 링크 복사</button>
+      </div>
+      <div class="flex items-center gap-2 p-2 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+        <span class="text-xs text-muted flex-1 truncate" id="linkBase">lookbook.html</span>
+        <a href="lookbook.html" target="_blank" class="text-xs text-blue-500 hover:underline shrink-0">열기 ↗</a>
+      </div>
+    </div>`;
+
+  // 아이템별 링크
+  if (filtered.length > 0) {
+    html += `<div class="card rounded-xl p-4">
+      <p class="text-sm font-bold mb-3">📦 아이템별 룩북 링크</p>
+      <div class="space-y-2">
+        ${filtered.map(it => {
+          const url = 'lookbook.html?item=' + it.id;
+          const videoLinks = it.videoLinks ? Object.values(it.videoLinks).filter(Boolean) : [];
+          return `<div class="flex items-center gap-3 p-2.5 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+            <div class="flex-1 min-w-0">
+              <p class="text-xs font-bold truncate">${safe(it.company)} ${safe(it.title || '')}</p>
+              <p class="text-[10px] text-muted truncate">${url}</p>
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+              <button onclick="copyLinkText('${url}')" class="px-2 py-1 rounded-lg text-[10px] font-bold bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600">📋</button>
+              <a href="${url}" target="_blank" class="px-2 py-1 rounded-lg text-[10px] font-bold bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600">↗</a>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+
+    // 영상 링크 모음
+    const withVideo = filtered.filter(it => (it.videoLinks && Object.values(it.videoLinks).some(Boolean)) || it.videoLink);
+    if (withVideo.length > 0) {
+      html += `<div class="card rounded-xl p-4">
+        <p class="text-sm font-bold mb-3">🎬 영상 링크</p>
+        <div class="space-y-2">
+          ${withVideo.map(it => {
+            const vl = it.videoLinks || {};
+            const links = Object.entries(vl).filter(([k,v]) => v).map(([k,v]) => ({ part: k === '0' ? '' : k + '편', url: v }));
+            if (links.length === 0 && it.videoLink) links.push({ part: '', url: it.videoLink });
+            return links.map(l => `<div class="flex items-center gap-3 p-2.5 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+              <div class="flex-1 min-w-0">
+                <p class="text-xs font-bold truncate">${safe(it.company)} ${l.part ? `<span class="text-pink-500">${l.part}</span>` : ''}</p>
+                <p class="text-[10px] text-muted truncate">${safe(l.url)}</p>
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <button onclick="copyLinkText('${safe(l.url)}')" class="px-2 py-1 rounded-lg text-[10px] font-bold bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600">📋</button>
+                <a href="${safe(l.url)}" target="_blank" class="px-2 py-1 rounded-lg text-[10px] font-bold bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600">↗</a>
+              </div>
+            </div>`).join('');
+          }).join('')}
+        </div>
+      </div>`;
+    }
+  }
+
+  el.innerHTML = html;
+}
+
+function copyLinkText(path) {
+  const full = window.location.origin + '/' + path;
+  navigator.clipboard.writeText(full).then(() => {
+    const toast = document.createElement('div');
+    toast.textContent = '✅ 링크 복사됨!';
+    toast.className = 'fixed top-4 left-1/2 -translate-x-1/2 bg-black text-white text-sm font-bold px-4 py-2 rounded-full z-50 shadow-lg';
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 1500);
+  });
+}
+
+// ===== 모달 =====
+function openModal(itemId, prefill) {
+  if (isShareMode) { alert('공유 보기 모드에서는 추가/수정할 수 없어요'); return; }
+  editingId = itemId || null;
+  document.getElementById('modalTitle').textContent = itemId ? '협찬 수정' : (prefill ? '📧 메일에서 자동 입력됨' : '협찬 추가');
+  document.getElementById('deleteBtn').classList.toggle('hidden', !itemId);
+
+  const defaults = {
+    company:'', contact:'', contactInfo:'', product:'', title:'',
+    platform:'youtube', start:'', due:dateStr(new Date()), status:'예정',
+    price:'', guide:'', link:'', memo:'', checks:{}, imageUrl:'', imageGallery:[],
+    couponCode:'', searchKeywords:'', productList:''
+  };
+  const it = itemId ? items.find(x => x.id === itemId) : (prefill ? {...defaults, ...prefill} : defaults);
+
+  document.getElementById('f_id').value = it.id || '';
+  document.getElementById('f_pageContent').value = it.pageContent || '';
+  document.getElementById('f_imageGallery').value = JSON.stringify(it.imageGallery || []);
+  document.getElementById('f_imageUrl').value = it.imageUrl || '';
+  document.getElementById('f_imagePreview').src = it.imageUrl || '';
+  document.getElementById('f_company').value = it.company || '';
+  document.getElementById('f_contact').value = it.contact || '';
+  document.getElementById('f_contactInfo').value = it.contactInfo || '';
+  document.getElementById('f_product').value = it.product || '';
+  document.getElementById('f_title').value = it.title || '';
+  document.getElementById('f_platform').value = it.platform || 'youtube';
+  document.getElementById('f_start').value = it.start || '';
+  document.getElementById('f_due').value = it.due || '';
+  document.getElementById('f_status').value = it.status || '예정';
+  document.getElementById('f_price').value = it.price || '';
+  document.getElementById('f_guide').value = it.guide || '';
+  document.getElementById('f_link').value = it.link || '';
+  document.getElementById('f_videoLink').value = it.videoLink || '';
+  document.getElementById('f_memo').value = it.memo || '';
+  document.getElementById('f_couponCode').value = it.couponCode || '';
+  document.getElementById('f_searchKeywords').value = it.searchKeywords || '';
+  document.getElementById('f_productList').value = it.productList || '';
+
+  // 썸네일 복원
+  const thumb = it.thumbnail || it.imageUrl || '';
+  const preview = document.getElementById('f_imagePreview');
+  const placeholder = document.getElementById('f_imagePlaceholder');
+  if (thumb) {
+    preview.src = thumb; preview.style.display = 'block';
+    if (placeholder) placeholder.style.display = 'none';
+  } else {
+    preview.src = ''; preview.style.display = 'none';
+    if (placeholder) placeholder.style.display = 'block';
+  }
+
+  const c = it.checks || {};
+  document.getElementById('c_brief').checked = !!c.brief;
+  document.getElementById('c_product').checked = !!c.product;
+  document.getElementById('c_shoot').checked = !!c.shoot;
+  document.getElementById('c_edit').checked = !!c.edit;
+  document.getElementById('c_approve').checked = !!c.approve;
+  document.getElementById('c_upload').checked = !!c.upload;
+  document.getElementById('c_paid').checked = !!c.paid;
+
+  document.getElementById('modal').classList.remove('hidden');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.add('hidden');
+  editingId = null;
+}
+
+function saveItem() {
+  const company = document.getElementById('f_company').value.trim();
+  const due = document.getElementById('f_due').value;
+  if (!company) { alert('업체명을 입력해줘!'); return; }
+  if (!due) { alert('마감일을 정해줘!'); return; }
+
+  const data = {
+    id: editingId || id(),
+    company,
+    contact: document.getElementById('f_contact').value.trim(),
+    contactInfo: document.getElementById('f_contactInfo').value.trim(),
+    product: document.getElementById('f_product').value.trim(),
+    title: document.getElementById('f_title').value.trim(),
+    platform: document.getElementById('f_platform').value,
+    start: document.getElementById('f_start').value,
+    due: due,
+    status: document.getElementById('f_status').value,
+    price: document.getElementById('f_price').value,
+    guide: document.getElementById('f_guide').value,
+    link: document.getElementById('f_link').value,
+    videoLink: document.getElementById('f_videoLink').value,
+    memo: document.getElementById('f_memo').value,
+    couponCode: document.getElementById('f_couponCode').value,
+    searchKeywords: document.getElementById('f_searchKeywords').value,
+    productList: document.getElementById('f_productList').value,
+    pageContent: document.getElementById('f_pageContent').value,
+    imageUrl: document.getElementById('f_imageUrl').value,
+    thumbnail: document.getElementById('f_imagePreview').src || document.getElementById('f_imageUrl').value || '',
+    imageGallery: (function(){ try { return JSON.parse(document.getElementById('f_imageGallery').value); } catch(e) { return []; }})(),
+    checks: {
+      brief: document.getElementById('c_brief').checked,
+      product: document.getElementById('c_product').checked,
+      shoot: document.getElementById('c_shoot').checked,
+      edit: document.getElementById('c_edit').checked,
+      approve: document.getElementById('c_approve').checked,
+      upload: document.getElementById('c_upload').checked,
+      paid: document.getElementById('c_paid').checked,
+    },
+    updatedAt: new Date().toISOString()
+  };
+
+  if (editingId) {
+    const i = items.findIndex(x => x.id === editingId);
+    items[i] = {...items[i], ...data};
+  } else {
+    items.push(data);
+  }
+  save();
+  closeModal();
+  renderAll();
+}
+
+function deleteCurrent() {
+  if (!editingId) return;
+  if (!confirm('정말 삭제할까요?')) return;
+  items = items.filter(x => x.id !== editingId);
+  save();
+  closeModal();
+  renderAll();
+}
+
+function deleteItem(itemId) {
+  const it = items.find(x => x.id === itemId);
+  if (!it) return;
+  if (!confirm(`"${it.company}" 협찬을 삭제할까요?`)) return;
+  items = items.filter(x => x.id !== itemId);
+  save();
+  renderAll();
+}
+
+function quickAdd(date) {
+  if (isShareMode) return;
+  openModal();
+  document.getElementById('f_due').value = date;
+}
+
+// ===== 북마크릿 =====
+function showBookmarklet() {
+  const dashboardUrl = window.location.origin + window.location.pathname;
+  const code = `(function(){try{var imgs=[].slice.call(document.querySelectorAll('img')).filter(function(i){return i.naturalWidth>150&&i.src&&i.src.indexOf('data:')!==0;}).slice(0,8).map(function(i){return i.src;});var d=JSON.stringify({text:document.body.innerText.slice(0,8000),title:document.title,url:location.href,images:imgs});var e=encodeURIComponent(btoa(unescape(encodeURIComponent(d))));window.open('${dashboardUrl}?prefill='+e,'_blank');}catch(err){alert('추출 실패: '+err.message);}})();`;
+  document.getElementById('bookmarkletLink').href = 'javascript:' + code;
+  document.getElementById('bookmarkletModal').classList.remove('hidden');
+  toggleMenu();
+}
+function closeBookmarklet() {
+  document.getElementById('bookmarkletModal').classList.add('hidden');
+}
+
+// ===== 이메일 파싱 =====
+function openParseModal() {
+  if (isShareMode) { alert('공유 보기 모드에서는 추가할 수 없어요'); return; }
+  document.getElementById('parseInput').value = '';
+  document.getElementById('parseModal').classList.remove('hidden');
+}
+function closeParseModal() {
+  document.getElementById('parseModal').classList.add('hidden');
+}
+
+function doParse() {
+  const text = document.getElementById('parseInput').value.trim();
+  if (!text) { alert('메일 본문을 붙여넣어줘!'); return; }
+  const parsed = parseEmail(text);
+  closeParseModal();
+  openModal(null, parsed);
+  // 사용자에게 어떤 게 자동 추출됐는지 알림
+  const found = [];
+  if (parsed.company) found.push('업체');
+  if (parsed.contact) found.push('담당자');
+  if (parsed.contactInfo) found.push('연락처');
+  if (parsed.due) found.push('마감일');
+  if (parsed.price) found.push('금액');
+  if (parsed.link) found.push('링크');
+  if (parsed.guide) found.push('가이드');
+  if (found.length > 0) {
+    setTimeout(() => {
+      const toast = document.createElement('div');
+      toast.className = 'fixed top-20 right-4 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg z-50 text-sm';
+      toast.innerHTML = `✅ 자동 추출: <b>${found.join(', ')}</b><br><span class="text-xs opacity-80">확인하고 저장 눌러!</span>`;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 4000);
+    }, 100);
+  }
+}
+
+function parseEmail(text) {
+  const result = {
+    company: '', contact: '', contactInfo: '', product: '', title: '',
+    platform: 'youtube', start: '', due: dateStr(new Date()), status: '예정',
+    price: '', guide: '', link: '', memo: text,
+    checks: {}, pageContent: ''
+  };
+
+  // 이메일 주소
+  const emails = text.match(/[\w.+-]+@[\w-]+\.[\w.-]+/g) || [];
+  const personalDomains = ['gmail','naver','daum','hotmail','outlook','yahoo','kakao','hanmail','nate'];
+  const bizEmail = emails.find(e => !personalDomains.includes(e.split('@')[1].split('.')[0].toLowerCase()));
+  if (bizEmail) {
+    result.contactInfo = bizEmail;
+    const domainName = bizEmail.split('@')[1].split('.')[0];
+    if (domainName.length >= 2) result.company = domainName.toUpperCase();
+  } else if (emails.length > 0) {
+    result.contactInfo = emails[0];
+  }
+
+  // 발신자 / 보낸사람 / 담당자
+  const senderMatch = text.match(/(?:보낸사람|담당자|매니저|contact\s*person|manager|From|발신자|sender|담당|PIC)\s*[:：]\s*([^\n<]+?)(?:[<(]|@|\n|$)/i);
+  if (senderMatch) {
+    result.contact = senderMatch[1].trim().replace(/["']/g, '');
+  }
+
+  // URL
+  const urlMatch = text.match(/https?:\/\/[^\s)\]"'<>]+/i);
+  if (urlMatch) result.link = urlMatch[0];
+
+  // 플랫폼
+  if (/유튜브|youtube\b|\byt\b|영상\s*콘텐츠/i.test(text)) result.platform = 'youtube';
+  else if (/인스타그?램?|instagram|릴스|reels|\big\b/i.test(text)) result.platform = 'instagram';
+  else if (/틱톡|tiktok/i.test(text)) result.platform = 'tiktok';
+  else if (/블로그|blog/i.test(text)) result.platform = 'blog';
+
+  // 제목 / 캠페인명
+  const titleMatch = text.match(/(?:제목|subject|캠페인|campaign|콘텐츠[명]?|타이틀|title)\s*[:：]\s*([^\n]+)/i);
+  if (titleMatch) result.title = titleMatch[1].trim().replace(/^\[.+?\]\s*/, '');
+
+  // 제품명
+  const productMatch = text.match(/(?:제품|상품|아이템|product|item)\s*[:：]\s*([^\n]+)/i);
+  if (productMatch) result.product = productMatch[1].trim();
+
+  // 마감일 (키워드 근처 우선)
+  const datePatterns = [
+    /(\d{4})[-./년\s]+(\d{1,2})[-./월\s]+(\d{1,2})/,
+    /(\d{1,2})\s*월\s*(\d{1,2})\s*일/,
+    /(\d{1,2})\/(\d{1,2})/
+  ];
+  function findDate(seg) {
+    for (const p of datePatterns) {
+      const m = seg.match(p);
+      if (m) {
+        const y = m.length === 4 ? m[1] : new Date().getFullYear();
+        const mo = m.length === 4 ? m[2] : m[1];
+        const d = m.length === 4 ? m[3] : m[2];
+        return `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      }
+    }
+    return null;
+  }
+  const dueKeyword = text.match(/(?:마감일?|deadline|업로드일?|게시일?|due\s*date?|기한|제출일?)[^\n]{0,60}/i);
+  if (dueKeyword) {
+    const d = findDate(dueKeyword[0]);
+    if (d) result.due = d;
+  }
+  // 시작일
+  const startKeyword = text.match(/(?:시작일?|start\s*date?|촬영일?|진행일?)[^\n]{0,60}/i);
+  if (startKeyword) {
+    const d = findDate(startKeyword[0]);
+    if (d) result.start = d;
+  }
+
+  // 금액
+  const priceKeyword = text.match(/(?:금액|비용|페이|fee|payment|예산|단가|원고료|광고비|보수|amount)[^\n]{0,40}/i);
+  function parseAmount(seg) {
+    const manMatch = seg.match(/(\d+)\s*만\s*원/);
+    if (manMatch) return String(parseInt(manMatch[1]) * 10000);
+    const wonMatch = seg.match(/([₩\$]?\s*\d[\d,]{2,})\s*(원|KRW|USD)?/);
+    if (wonMatch) return wonMatch[1].replace(/[₩\$,\s]/g,'');
+    return '';
+  }
+  if (priceKeyword) {
+    const p = parseAmount(priceKeyword[0]);
+    if (p) result.price = p;
+  }
+  if (!result.price) {
+    // 전체에서 만원 패턴 우선 검색
+    const manMatch = text.match(/(\d+)\s*만\s*원/);
+    if (manMatch) result.price = String(parseInt(manMatch[1]) * 10000);
+    else {
+      const wonMatch = text.match(/([₩]\s*\d[\d,]+|\d[\d,]{4,}\s*원)/);
+      if (wonMatch) result.price = wonMatch[0].replace(/[₩,\s원]/g,'');
+    }
+  }
+
+  // 가이드라인 (다중 줄 블록 + 멘션 + 해시태그 모아서 정리)
+  const guideParts = [];
+
+  // 1) 가이드 헤더 다음의 여러 줄 본문 추출
+  const lines = text.split('\n');
+  const guideHeaderRx = /(?:^|\b)(콘텐츠\s*가이드|콘텐츠\s*요건|콘텐츠\s*요구|콘텐츠\s*규칙|가이드라?인|필수\s*사항|필수\s*조건|필수\s*멘션|컨셉|content\s*guide|content\s*requirement|guideline|requirement|how\s*to|must\s*include)[\s:：]*$/i;
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i].trim();
+    if (guideHeaderRx.test(l) || /^(?:콘텐츠\s*가이드|가이드라?인|필수)/i.test(l)) {
+      const collected = [];
+      for (let j = i + 1; j < Math.min(i + 25, lines.length); j++) {
+        const cur = lines[j].trim();
+        if (!cur) { if (collected.length >= 2) break; continue; }
+        // 다른 큰 섹션 헤더 만나면 중단
+        if (/^(?:제출|마감|페이|보수|연락|문의|deadline|payment|contact)[\s:：]/i.test(cur)) break;
+        // 빈 헤더만 있는 경우 제외
+        if (cur.length < 2) continue;
+        collected.push(cur.startsWith('-')||cur.startsWith('•')||cur.startsWith('*') ? cur : `• ${cur}`);
+        if (collected.length >= 10) break;
+      }
+      if (collected.length >= 1) {
+        guideParts.push(collected.join('\n'));
+        break;
+      }
+    }
+  }
+
+  // 2) 키워드: 한 줄 패턴 (위에서 못 찾았으면)
+  if (guideParts.length === 0) {
+    const guideKeyword = text.match(/(?:가이드|guideline|필수|해시태그|hashtag|멘션|mention)\s*[:：]\s*([^\n]+)/i);
+    if (guideKeyword) guideParts.push(guideKeyword[1].trim());
+  }
+
+  // 3) 멘션 (@brand)
+  const mentions = [...new Set((text.match(/@[가-힣A-Za-z0-9_.]{2,30}/g) || []))]
+    .filter(m => !m.includes('@gmail') && !m.includes('@naver') && !m.includes('@shein.com')); // 이메일 도메인 제외
+  if (mentions.length) guideParts.push(`멘션: ${mentions.join(' ')}`);
+
+  // 4) 숫자 요건 (영상 60초, 사진 3장 등)
+  const numReqs = [...new Set((text.match(/\d+\s*(?:초|분|컷|장|개|회|번|시간|seconds?|minutes?|cuts?|shots?|images?)/gi) || []))];
+  if (numReqs.length && guideParts.join('\n').match(/\d/) === null) {
+    guideParts.push(`요건: ${numReqs.join(', ')}`);
+  }
+
+  // 5) 해시태그
+  const hashtags = [...new Set((text.match(/#[가-힣A-Za-z0-9_]+/g) || []))];
+  const guideTextLower = guideParts.join(' ').toLowerCase();
+  const extraTags = hashtags.filter(t => !guideTextLower.includes(t.toLowerCase()));
+  if (extraTags.length) guideParts.push(`해시태그: ${extraTags.join(' ')}`);
+
+  result.guide = guideParts.join('\n\n');
+
+  // 알려진 브랜드 자동 인식
+  const brands = ['SHEIN','무신사','올리브영','29CM','W컨셉','지그재그','에이블리','나이키','아디다스','유니클로','자라','H&M','쿠팡','네이버','카카오','LG','삼성','다이슨','애플','구글'];
+  for (const b of brands) {
+    if (new RegExp(b, 'i').test(text)) {
+      result.company = b;
+      break;
+    }
+  }
+
+  return result;
+}
+
+// ===== 상세 =====
+// SHEIN 제품 정보 (URL + 스토어이름 + ID) 자동 정리 → LOOK 1/2/3... 형식
+// ===== 담당자 아바타 + 색상 커스텀 =====
+const AVATAR_COLORS = ['#E53935','#8E24AA','#1E88E5','#43A047','#FB8C00','#00ACC1','#6D4C41','#546E7A','#D81B60','#3949AB'];
+const PICKABLE_COLORS = [
+  '#E53935','#D81B60','#8E24AA','#5E35B1','#3949AB','#1E88E5',
+  '#00ACC1','#00897B','#43A047','#7CB342','#FB8C00','#F4511E',
+  '#6D4C41','#546E7A','#78909C','#EC407A','#AB47BC','#42A5F5',
+  '#26C6DA','#66BB6A','#FFA726','#FF7043','#8D6E63','#BDBDBD'
+];
+let contactColors = JSON.parse(localStorage.getItem('contact_colors') || '{}');
+function saveContactColors() { localStorage.setItem('contact_colors', JSON.stringify(contactColors)); }
+
+// 담당자 드롭다운: 기존 담당자 목록 수집 + 변경
+function getContactList() {
+  const names = new Set();
+  items.forEach(it => { if (it.contact && !/^[\s\-_.?]+$/.test(it.contact)) names.add(it.contact); });
+  return [...names].sort();
+}
+
+function populateContactOptions(sel, itemId) {
+  const it = items.find(x => x.id === itemId);
+  const current = it?.contact || '';
+  const contacts = getContactList();
+  sel.innerHTML = `<option value="">선택</option>` +
+    contacts.map(c => `<option value="${c}" ${c === current ? 'selected' : ''}>${c}</option>`).join('') +
+    `<option value="__new__">+ 새 담당자</option>`;
+}
+
+function updateContact(itemId, value) {
+  const it = items.find(x => x.id === itemId);
+  if (!it) return;
+  if (value === '__new__') {
+    const name = prompt('새 담당자 이름:');
+    if (!name || !name.trim()) { renderAll(); return; }
+    it.contact = name.trim();
+  } else {
+    it.contact = value;
+  }
+  save();
+  renderAll();
+}
+
+function contactAvatar(name, size, clickable) {
+  const s = size || 10;
+  const px = s >= 10 ? 'text-sm' : s >= 7 ? 'text-[11px]' : 'text-[9px]';
+  // 비어있거나 "-" 같은 의미없는 값이면 숨김
+  if (!name || /^[\s\-_.?]+$/.test(name)) return '';
+  const hash = [...name].reduce((a, c) => a + c.charCodeAt(0), 0);
+  const color = contactColors[name] || AVATAR_COLORS[hash % AVATAR_COLORS.length];
+  const display = name.length <= 2 ? name : name.length === 3 ? name.slice(1) : name.slice(0, 2);
+  const clickAttr = clickable ? ` onclick="event.stopPropagation();openColorPicker('${name.replace(/'/g,"\\\\'")}')" style="cursor:pointer" title="${name} 색상 변경"` : '';
+  return `<div class="w-${s} h-${s} rounded-xl flex items-center justify-center ${px} text-white font-bold flex-shrink-0 hover:scale-110 transition-transform" style="background:${color}"${clickAttr}>${display}</div>`;
+}
+
+function openColorPicker(contactName) {
+  const existing = document.getElementById('colorPickerPopup');
+  if (existing) existing.remove();
+  const currentColor = contactColors[contactName] || '';
+  const safeName = contactName.replace(/'/g, "\\'");
+  let html = '<div id="colorPickerPopup" class="fixed inset-0 bg-black/50 z-[999] flex items-center justify-center p-4" onclick="if(event.target===this)this.remove()">';
+  html += '<div class="bg-[#1A1A1A] rounded-2xl border border-[#333] w-full max-w-xs shadow-2xl">';
+  html += '<div class="p-4 border-b border-[#333]"><h3 class="text-sm font-bold text-white">🎨 ' + contactName + ' 색상 선택</h3></div>';
+  html += '<div class="p-4 grid grid-cols-6 gap-2">';
+  PICKABLE_COLORS.forEach(c => {
+    const ring = c === currentColor ? ' ring-2 ring-white ring-offset-2 ring-offset-[#1A1A1A]' : '';
+    html += '<button onclick="setContactColor(\'' + safeName + '\',\'' + c + '\')" class="w-9 h-9 rounded-xl hover:scale-110 transition-transform' + ring + '" style="background:' + c + '"></button>';
+  });
+  html += '</div>';
+  html += '<div class="p-3 border-t border-[#333] flex gap-2">';
+  html += '<button onclick="setContactColor(\'' + safeName + '\',\'\')" class="flex-1 card px-3 py-2 rounded-xl text-xs font-semibold">기본으로</button>';
+  html += '<button onclick="document.getElementById(\'colorPickerPopup\').remove()" class="flex-1 btn-primary px-3 py-2 rounded-xl text-xs font-bold">닫기</button>';
+  html += '</div></div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function setContactColor(name, color) {
+  if (color) contactColors[name] = color;
+  else delete contactColors[name];
+  saveContactColors();
+  document.getElementById('colorPickerPopup')?.remove();
+  renderAll();
+}
+
+// 썸네일 우선, 없으면 빈 자리 (담당자 아바타 X)
+function itemThumb(it, size) {
+  const s = size || 7;
+  const src = it.thumbnail || it.imageUrl || '';
+  if (src) return `<img src="${src}" alt="" class="w-${s} h-${s} rounded-lg object-cover flex-shrink-0 border border-c" onerror="this.style.display='none'">`;
+  return `<div class="w-${s} h-${s} rounded-lg bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0 text-[10px] text-muted">📷</div>`;
+}
+
+// ===== 프로젝트 이미지 (복붙/업로드) =====
+function handleImagePaste(e) {
+  const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      e.preventDefault();
+      const file = item.getAsFile();
+      compressAndPreview(file);
+      return;
+    }
+  }
+  // 이미지 아니면 URL 텍스트일 수 있음
+  const text = e.clipboardData.getData('text');
+  if (text && /^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)/i.test(text)) {
+    e.preventDefault();
+    document.getElementById('f_imageUrl').value = text;
+    previewImageUrl(text);
+  }
+}
+
+function handleImageFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  compressAndPreview(file);
+}
+
+function compressAndPreview(file) {
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const img = new Image();
+    img.onload = function() {
+      // 200x200으로 리사이즈 (localStorage 용량 절약)
+      const canvas = document.createElement('canvas');
+      const size = 200;
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      // 정사각 크롭
+      const min = Math.min(img.width, img.height);
+      const sx = (img.width - min) / 2, sy = (img.height - min) / 2;
+      ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+      showImagePreview(dataUrl);
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function previewImageUrl(url) {
+  if (url) showImagePreview(url);
+  else clearProjectImage();
+}
+
+function showImagePreview(src) {
+  const preview = document.getElementById('f_imagePreview');
+  const placeholder = document.getElementById('f_imagePlaceholder');
+  preview.src = src;
+  preview.style.display = 'block';
+  if (placeholder) placeholder.style.display = 'none';
+}
+
+function clearProjectImage() {
+  const preview = document.getElementById('f_imagePreview');
+  const placeholder = document.getElementById('f_imagePlaceholder');
+  document.getElementById('f_imageUrl').value = '';
+  preview.src = ''; preview.style.display = 'none';
+  if (placeholder) placeholder.style.display = 'block';
+}
+
+// ===== 상세 모달 이미지 (붙여넣기 / 드래그 / 파일) =====
+function detailImgPlaceholder(itemId) {
+  return detailImgMiniPlaceholder(itemId);
+}
+function detailImgMiniPlaceholder(itemId) {
+  return `<div class="w-20 h-20 rounded-xl bg-gray-100 dark:bg-gray-800 flex flex-col items-center justify-center cursor-pointer border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-pink-400 transition-colors"
+    onclick="document.getElementById('detailImgFile_${itemId}').click()"
+    onpaste="handleDetailImagePaste(event, '${itemId}')"
+    ondragover="event.preventDefault();this.classList.add('border-pink-400')"
+    ondragleave="this.classList.remove('border-pink-400')"
+    ondrop="handleDetailImageDrop(event, '${itemId}')"
+    tabindex="0" title="썸네일 추가">
+    <p class="text-lg opacity-40">📷</p>
+    <p class="text-[8px] text-muted">추가</p>
+    <input type="file" id="detailImgFile_${itemId}" accept="image/*" class="hidden" onchange="handleDetailImageFile(event, '${itemId}')" />
+  </div>`;
+}
+
+function handleDetailImagePaste(e, itemId) {
+  const clipItems = (e.clipboardData || e.originalEvent?.clipboardData)?.items;
+  if (!clipItems) return;
+  for (const ci of clipItems) {
+    if (ci.type.startsWith('image/')) {
+      e.preventDefault();
+      compressAndSaveDetail(ci.getAsFile(), itemId);
+      return;
+    }
+  }
+  // URL 텍스트
+  const text = e.clipboardData?.getData('text');
+  if (text && /^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)/i.test(text)) {
+    e.preventDefault();
+    saveDetailImage(itemId, text);
+  }
+}
+
+function handleDetailImageFile(e, itemId) {
+  const file = e.target.files?.[0];
+  if (file) compressAndSaveDetail(file, itemId);
+}
+
+function handleDetailImageDrop(e, itemId) {
+  e.preventDefault();
+  const file = e.dataTransfer.files?.[0];
+  if (file && file.type.startsWith('image/')) compressAndSaveDetail(file, itemId);
+}
+
+function compressAndSaveDetail(file, itemId) {
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const img = new Image();
+    img.onload = function() {
+      // 정사각 크롭 200x200
+      const canvas = document.createElement('canvas');
+      const size = 200;
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      const min = Math.min(img.width, img.height);
+      const sx = (img.width - min) / 2, sy = (img.height - min) / 2;
+      ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+      saveDetailImage(itemId, dataUrl);
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function saveDetailImage(itemId, src) {
+  const it = items.find(x => x.id === itemId);
+  if (!it) return;
+  it.thumbnail = src;
+  it.imageUrl = src;
+  save();
+  renderAll(); // 캘린더, 리스트, 캡션 모음 전부 반영
+  openDetail(itemId); // 상세 모달도 새로고침
+}
+
+function removeDetailImage(itemId) {
+  const it = items.find(x => x.id === itemId);
+  if (!it) return;
+  delete it.thumbnail;
+  delete it.imageUrl;
+  save();
+  openDetail(itemId);
+}
+
+// ===== SHEIN 브리핑 자동 파싱 =====
+function handleBriefPaste(e) {
+  const pasted = (e.clipboardData || window.clipboardData).getData('text');
+  const parsed = parseSHEINBrief(pasted);
+  if (!parsed) return; // SHEIN 형식 아니면 기본 붙여넣기
+  e.preventDefault();
+
+  // 자동 필드 채우기
+  if (parsed.searchKeywords) document.getElementById('f_searchKeywords').value = parsed.searchKeywords;
+  if (parsed.couponCode) document.getElementById('f_couponCode').value = parsed.couponCode;
+  if (parsed.guide) document.getElementById('f_guide').value = parsed.guide;
+  if (parsed.productList) document.getElementById('f_productList').value = parsed.productList;
+
+  // 업체명이 비어있으면 SHEIN으로
+  const companyField = document.getElementById('f_company');
+  if (companyField && !companyField.value) companyField.value = 'SHEIN';
+
+  // 플랫폼 자동 선택 (비어있으면)
+  const platformField = document.getElementById('f_platform');
+  if (platformField && !platformField.value) platformField.value = 'instagram';
+
+  // 토스트 알림
+  const toast = document.createElement('div');
+  toast.className = 'fixed top-4 left-1/2 -translate-x-1/2 z-[999] bg-green-600 text-white px-5 py-3 rounded-xl shadow-2xl text-sm font-bold';
+  toast.innerHTML = `✅ SHEIN 브리핑 자동 파싱! ${parsed.lookCount}개 LOOK · 쿠폰: ${parsed.couponCode || '-'}`;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+
+  // 가격 입력 팝업 표시
+  if (parsed.lookCount > 0) showPriceInputPopup(parsed);
+}
+
+function showPriceInputPopup(parsed, targetItemId) {
+  // targetItemId 있으면 아이템에 직접 적용, 없으면 모달 필드에 적용
+  const lookLines = parsed.productList.split(/\n\n/).filter(l => /🎀/.test(l));
+  const lookData = lookLines.map((look, i) => {
+    const brandMatch = look.match(/🎀 LOOK \d+\n([^|🆔🔗\n]+)/);
+    const brand = brandMatch ? brandMatch[1].trim() : `LOOK ${i+1}`;
+    const urlMatch = look.match(/🔗\s*(https?:\/\/[^\s]+)/);
+    const url = urlMatch ? urlMatch[1] : '';
+    const idMatch = look.match(/🆔\s*(\d+)/);
+    const id = idMatch ? idMatch[1] : '';
+    return { brand, url, id };
+  });
+
+  let html = `<div class="fixed inset-0 bg-black/60 z-[999] flex items-center justify-center p-4" id="pricePopup" onclick="if(event.target===this)this.remove()">
+    <div class="bg-[#1A1A1A] rounded-2xl border border-[#333] w-full max-w-lg max-h-[80vh] overflow-y-auto shadow-2xl">
+      <div class="p-5 border-b border-[#333]">
+        <h3 class="text-lg font-bold text-white">💰 가격 입력 <span class="text-sm font-normal text-[#888]">(${lookData.length}개)</span></h3>
+        <p class="text-xs text-[#888] mt-1">링크 클릭 → 가격 확인 → 입력! 모르면 비워두고 나중에 ㄱㄱ</p>
+      </div>
+      <div class="p-4 space-y-2">`;
+
+  lookData.forEach((look, i) => {
+    html += `<div class="flex items-center gap-2.5 p-2.5 rounded-xl bg-[#111] border border-[#2A2A2A]">
+      <span class="text-xs font-bold text-pink-400 w-5 text-center flex-shrink-0">${i+1}</span>
+      <div class="flex-1 min-w-0">
+        <p class="text-xs font-semibold text-white truncate">${look.brand}</p>
+        <p class="text-[10px] text-[#555] font-mono">${look.id}</p>
+      </div>
+      ${look.url ? `<a href="${look.url}" target="_blank" class="text-[10px] text-blue-400 hover:underline flex-shrink-0 px-1">🔗</a>` : ''}
+      <input type="number" id="price_${i}" placeholder="₩"
+        class="w-20 px-2 py-1.5 rounded-lg bg-[#0A0A0A] border border-[#333] text-white text-xs text-right"
+        onkeydown="if(event.key==='Enter'){const n=document.getElementById('price_${i+1}');if(n)n.focus();else document.getElementById('priceApplyBtn')?.click()}" />
+    </div>`;
+  });
+
+  const targetAttr = targetItemId ? `'${targetItemId}'` : 'null';
+  html += `</div>
+      <div class="p-4 border-t border-[#333] flex gap-2">
+        <button onclick="document.getElementById('pricePopup').remove()" class="flex-1 card px-4 py-2.5 rounded-xl text-sm font-semibold">나중에</button>
+        <button id="priceApplyBtn" onclick="applyPrices(${lookData.length}, ${targetAttr})" class="flex-1 btn-primary px-4 py-2.5 rounded-xl text-sm font-bold">✅ 적용</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+  // 첫 번째 가격 입력에 포커스
+  setTimeout(() => document.getElementById('price_0')?.focus(), 200);
+}
+
+function applyPrices(count, targetItemId) {
+  let hasAny = false;
+  const prices = [];
+  for (let i = 0; i < count; i++) {
+    const inp = document.getElementById('price_' + i);
+    const val = inp?.value ? Number(inp.value).toLocaleString('ko-KR') : '';
+    prices.push(val);
+    if (val) hasAny = true;
+  }
+  if (!hasAny) { document.getElementById('pricePopup')?.remove(); return; }
+
+  if (targetItemId) {
+    // 아이템에 직접 적용
+    const it = items.find(x => x.id === targetItemId);
+    if (it && it.productList) {
+      const lookBlocks = it.productList.split(/\n\n/);
+      for (let i = 0; i < count && i < lookBlocks.length; i++) {
+        if (!prices[i]) continue;
+        lookBlocks[i] = lookBlocks[i].replace(/(🆔\s*\d+)(\s*\|?\s*💰[^|\n]*)?/, `$1 | 💰 ${prices[i]}원`);
+      }
+      it.productList = lookBlocks.join('\n\n');
+      delete it.customCaption;
+      save();
+      refreshLookEditor(targetItemId);
+      renderAll();
+    }
+  } else {
+    // 모달 필드에 적용
+    const ta = document.getElementById('f_productList');
+    if (ta) {
+      const lookBlocks = ta.value.split(/\n\n/);
+      for (let i = 0; i < count && i < lookBlocks.length; i++) {
+        if (!prices[i]) continue;
+        lookBlocks[i] = lookBlocks[i].replace(/(🆔\s*\d+)(\s*\|?\s*💰[^|\n]*)?/, `$1 | 💰 ${prices[i]}원`);
+      }
+      ta.value = lookBlocks.join('\n\n');
+    }
+  }
+  document.getElementById('pricePopup')?.remove();
+  const toast = document.createElement('div');
+  toast.className = 'fixed top-4 left-1/2 -translate-x-1/2 z-[999] bg-green-600 text-white px-5 py-3 rounded-xl shadow-2xl text-sm font-bold';
+  toast.textContent = '💰 가격 적용 완료!';
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2000);
+}
+
+function parseSHEINBrief(text) {
+  if (!text) return null;
+
+  // SHEIN 브리핑 감지 (유연하게)
+  const hasStores = /스토어\s*(이름|검색)/i.test(text);
+  const hasCoupon = /쿠폰/i.test(text);
+  const hasLooks = /🎀\s*LOOK\s*\d+/i.test(text);
+  const hasSHEIN = /shein/i.test(text);
+
+  // 최소 조건: (쿠폰 OR LOOK블록) AND (스토어언급 OR SHEIN언급 OR LOOK블록)
+  if (!((hasCoupon || hasLooks) && (hasStores || hasSHEIN || hasLooks))) return null;
+
+  // 1. 검색 코드/키워드 추출
+  let searchKeywords = '';
+  const searchCodeMatch = text.match(/검색\s*코드\s*[:：]?\s*[\s\S]*?([A-Za-z0-9]{3,})/);
+  const storeSearchMatch = text.match(/팔로우\s*\(([^)]+)\)/);
+  if (searchCodeMatch && /검색\s*코드/.test(text)) searchKeywords = searchCodeMatch[1];
+  else if (storeSearchMatch) searchKeywords = storeSearchMatch[1];
+
+  // 2. 쿠폰 코드 추출 (여러 형식 대응)
+  let couponCode = '';
+  const couponM1 = text.match(/쿠폰[^:：\n]*[:：]\s*\n?[^\n]*?([A-Za-z0-9]{5,})/);
+  if (couponM1) couponCode = couponM1[1];
+
+  // 3. 해시태그 추출
+  const hashtags = [...new Set((text.match(/#[가-힣A-Za-z0-9_]+/g) || []))].join(' ');
+
+  // 4. 멘션(브랜드 태그) 추출
+  const mentions = [...new Set((text.match(/@[A-Za-z0-9_.]+/g) || []))]
+    .filter(m => !/@(gmail|naver|daum|hotmail|outlook|yahoo)/i.test(m))
+    .join(' ');
+
+  // 5. 가이드라인 = 해시태그 + 멘션
+  const guide = [hashtags, mentions].filter(Boolean).join('\n');
+
+  // 6. 제품 리스트 파싱 (두 가지 형식 지원)
+  const looks = [];
+
+  if (hasLooks) {
+    // 새 형식: 🎀 LOOK 블록이 이미 있는 경우
+    const lookBlocks = text.split(/(?=🎀\s*LOOK\s*\d+)/).filter(b => /🎀\s*LOOK/.test(b));
+    lookBlocks.forEach((block, i) => {
+      const lines = block.trim().split('\n').map(l => l.trim()).filter(Boolean);
+      const rest = lines.slice(1).join('\n');
+      // 브랜드 추출: 둘째 줄의 | 앞부분
+      const brandLine = lines[1] || '';
+      const brand = brandLine.split('|')[0].replace(/🆔.*|🔗.*/g, '').trim();
+      const idMatch = rest.match(/🆔\s*(\d+)/);
+      const id = idMatch ? idMatch[1] : '';
+      const urlMatch = rest.match(/🔗\s*(https?:\/\/[^\s]+)/);
+      const url = urlMatch ? urlMatch[1] : '';
+      const priceMatch = rest.match(/💰\s*([\d,]+)\s*원/);
+      const price = priceMatch ? priceMatch[1] : '';
+
+      const parts = [];
+      if (brand) parts.push(brand);
+      if (id) parts.push(`🆔 ${id}`);
+      if (price) parts.push(`💰 ${price}원`);
+      looks.push(`🎀 LOOK ${i + 1}\n${parts.join(' | ')}${url ? '\n🔗 ' + url : ''}`);
+    });
+  } else {
+    // 기존 형식: 스토어 이름: 블록
+    const storeBlocks = text.split(/스토어\s*이름\s*[:：]?\s*/i).slice(1);
+    storeBlocks.forEach((block, i) => {
+      const lines = block.trim().split('\n').map(l => l.trim()).filter(Boolean);
+      const brand = lines[0] || '';
+      const idMatch = block.match(/🆔\s*(\d+)/);
+      const id = idMatch ? idMatch[1] : '';
+      const urlMatch = block.match(/🔗\s*(https?:\/\/[^\s]+)/);
+      const url = urlMatch ? urlMatch[1] : '';
+      const priceMatch = block.match(/(\d[\d,]+)\s*원/);
+      const price = priceMatch ? priceMatch[1] : '';
+
+      const parts = [];
+      if (brand) parts.push(brand);
+      if (id) parts.push(`🆔 ${id}`);
+      if (price) parts.push(`💰 ${price}원`);
+      looks.push(`🎀 LOOK ${i + 1}\n${parts.join(' | ')}${url ? '\n🔗 ' + url : ''}`);
+    });
+  }
+
+  const productList = looks.join('\n\n');
+
+  return {
+    searchKeywords,
+    couponCode,
+    guide,
+    productList,
+    lookCount: looks.length,
+    // 가격 없는 LOOK URL 목록 (가격 팝업용)
+    lookUrls: looks.map((l, i) => {
+      const urlM = l.match(/🔗\s*(https?:\/\/[^\s]+)/);
+      const brandM = l.match(/🎀 LOOK \d+\n([^|🆔🔗\n]+)/);
+      const idM = l.match(/🆔\s*(\d+)/);
+      return { index: i, url: urlM?.[1] || '', brand: brandM?.[1]?.trim() || '', id: idM?.[1] || '' };
+    }),
+  };
+}
+
+function autoFormatProductList(text) {
+  if (!text || text.length < 30) return null;
+  const urls = text.match(/https?:\/\/[^\s)\]"'<>]+/g) || [];
+  const brandMatches = text.match(/스토어\s*이름\s*[:：]\s*[^\n]+/g) || [];
+  const brands = brandMatches.map(m => m.replace(/^[^:：]*[:：]\s*/, '').trim());
+  const idMatches = text.match(/(?:^|\n)\s*(?:ID|아이디|🆔)\s*[:：]?\s*(\d{5,})/g) || [];
+  const ids = idMatches.map(m => (m.match(/\d{5,}/) || [])[0]).filter(Boolean);
+  const priceMatches = text.match(/(\d[\d,]{2,})\s*원/g) || [];
+  const prices = priceMatches.map(m => m.replace(/[^\d,]/g, ''));
+
+  // 그룹이 2개 미만이면 정리할 게 없음
+  const count = Math.max(urls.length, brands.length, ids.length);
+  if (count < 2) return null;
+
+  const looks = [];
+  for (let i = 0; i < count; i++) {
+    const brand = brands[i] || '';
+    const id = ids[i] || '';
+    const url = urls[i] || '';
+    const price = prices[i] || '';
+    const parts = [];
+    if (brand) parts.push(brand);
+    if (id) parts.push(`🆔 ${id}`);
+    if (price) parts.push(`💰 ${price}원`);
+    looks.push(`🎀 LOOK ${i + 1}\n${parts.join(' | ')}${url ? '\n🔗 ' + url : ''}`);
+  }
+  return looks.join('\n\n');
+}
+
+function handleCaptionPaste(e, itemId) {
+  const pasted = (e.clipboardData || window.clipboardData).getData('text');
+
+  // SHEIN 브리핑 감지 → 파싱 + 가격 팝업
+  const brief = parseSHEINBrief(pasted);
+  if (brief) {
+    e.preventDefault();
+    const it = items.find(x => x.id === itemId);
+    if (it) {
+      if (brief.searchKeywords) it.searchKeywords = brief.searchKeywords;
+      if (brief.couponCode) it.couponCode = brief.couponCode;
+      if (brief.guide) it.guide = brief.guide;
+      if (brief.productList) it.productList = brief.productList;
+      if (!it.company || it.company === '무신사' || it.company === '올리브영') it.company = 'SHEIN';
+      delete it.customCaption;
+      save();
+      const ta = e.target;
+      ta.value = generateCaption(it);
+      // LOOK 에디터도 갱신
+      refreshLookEditor(itemId);
+      const toast = document.createElement('div');
+      toast.className = 'fixed top-4 left-1/2 -translate-x-1/2 z-[999] bg-green-600 text-white px-5 py-3 rounded-xl shadow-2xl text-sm font-bold';
+      toast.innerHTML = `✅ SHEIN 파싱 완료! (${brief.lookCount}개 LOOK) 가격 입력 ↓`;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+      if (brief.lookCount > 0) showPriceInputPopup(brief, itemId);
+    }
+    return;
+  }
+
+  const formatted = autoFormatProductList(pasted);
+  if (!formatted) return;
+  e.preventDefault();
+  const ta = e.target;
+  const start = ta.selectionStart, end = ta.selectionEnd;
+  ta.value = ta.value.slice(0, start) + formatted + ta.value.slice(end);
+  ta.selectionStart = ta.selectionEnd = start + formatted.length;
+  saveCustomCaptionById(itemId, ta.value);
+  const ind = document.getElementById('captionSaved_' + itemId);
+  if (ind) { ind.textContent = '🪄 자동 정리됨!'; ind.style.opacity = '1'; setTimeout(() => { ind.style.opacity = '0.4'; }, 2500); }
+}
+
+function manualFormatCaption(boxId) {
+  // boxId 는 "cap_<실제id>" 또는 "<실제id>" 형태
+  const ta = document.getElementById('captionBox_' + boxId) || document.getElementById('captionClean_' + boxId);
+  if (!ta) return;
+  const formatted = autoFormatProductList(ta.value);
+  if (!formatted) { alert('정리할 SHEIN 제품 패턴을 못 찾았어! (URL + 스토어이름 + ID 묶음이 2개 이상 필요)'); return; }
+  ta.value = formatted;
+  // 실제 itemId 추출 (prefix 제거)
+  const realId = boxId.replace(/^cap_/, '');
+  saveCustomCaptionById(realId, ta.value);
+  refreshLookEditor(realId);
+}
+
+function saveCustomCaption(itemId, text) {
+  saveCustomCaptionById(itemId, text);
+}
+
+function resetCaption(itemId) {
+  resetCaptionById(itemId, '');
+}
+
+// ===== 제목 메이커 =====
+function generateTitles(itemId) {
+  const input = document.getElementById('titleInput_' + itemId)?.value?.trim();
+  if (!input) return;
+  const box = document.getElementById('titleResults_' + itemId);
+  box.classList.remove('hidden');
+
+  // 핵심 키워드 추출 (조사/접속사 제거)
+  const stopWords = ['은','는','이','가','을','를','의','에','로','로','와','과','에서','까지','부터','도','만','밖에','처럼','보다','하고','그리고','또한','그래서','하지만'];
+  const words = input.replace(/[~!@#$%^&*()\[\]{}|;:'",.<>?\/\\]/g, ' ').split(/\s+/).filter(w => w.length > 0 && !stopWords.includes(w));
+  const keyword = words.join(' ');
+  const first = words[0] || input;
+
+  // 아이템 정보로 컨텍스트 보강
+  const it = items.find(x => x.id === itemId);
+  const company = it?.company || '';
+  const isSHEIN = /shein/i.test(company);
+  const lookCount = it?.productList ? (it.productList.match(/🎀 LOOK/g) || []).length : 0;
+
+  // 카테고리 감지
+  const isFashion = /하울|옷|패션|코디|룩북|스타일|착용|데일리룩|ootd|outfit/i.test(input + ' ' + company);
+  const isBeauty = /뷰티|메이크업|화장|스킨케어|립|섀도우|파운데이션/i.test(input);
+  const isFood = /먹방|맛집|요리|레시피|카페/i.test(input);
+  const isReview = /리뷰|후기|솔직|언박싱|개봉/i.test(input);
+  const isVlog = /브이로그|일상|데이트|여행|출근/i.test(input);
+
+  const titles = [];
+
+  // 공통 패턴 (항상)
+  titles.push({ emoji: '🔥', text: `${keyword} | 이건 진짜 봐야됨`, tag: '호기심' });
+  titles.push({ emoji: '👀', text: `${first} 이거 실화..? ${words.slice(1).join(' ')}`, tag: '놀람' });
+  titles.push({ emoji: '💯', text: `찐으로 추천하는 ${keyword}`, tag: '신뢰' });
+
+  // SHEIN 전용
+  if (isSHEIN) {
+    titles.push({ emoji: '🛍️', text: `SHEIN ${lookCount ? lookCount + '벌' : ''} 하울🎀 갓성비 미쳤다`, tag: 'SHEIN' });
+    titles.push({ emoji: '💸', text: `전부 만원 이하?! 쉬인 ${keyword}`, tag: '가성비' });
+    titles.push({ emoji: '✨', text: `이 가격에 이 퀄리티..? 쉬인 ${keyword} 솔직 리뷰`, tag: '솔직' });
+  }
+
+  // 패션
+  if (isFashion || isSHEIN) {
+    titles.push({ emoji: '👗', text: `요즘 매일 입는 ${keyword} 🩷`, tag: '데일리' });
+    titles.push({ emoji: '🪞', text: `${keyword} 입어봤는데 핏 대박🫢`, tag: '핏감' });
+    titles.push({ emoji: '📦', text: `${lookCount ? lookCount + '벌 ' : ''}언박싱📦 ${keyword} 하울`, tag: '언박싱' });
+  }
+
+  // 뷰티
+  if (isBeauty) {
+    titles.push({ emoji: '💄', text: `${keyword} 이거 없으면 안 됨..`, tag: '필수템' });
+    titles.push({ emoji: '🪄', text: `${keyword}으로 인생 메이크업 완성✨`, tag: '변신' });
+  }
+
+  // 리뷰
+  if (isReview) {
+    titles.push({ emoji: '📋', text: `${keyword} 장단점 싹 다 알려줌`, tag: '비교' });
+    titles.push({ emoji: '🤔', text: `${keyword} 살까 말까? 결론은...`, tag: '결론' });
+  }
+
+  // 브이로그
+  if (isVlog) {
+    titles.push({ emoji: '🎬', text: `${keyword} vlog 🎀 소소하지만 확실한`, tag: '소확행' });
+  }
+
+  // 범용 추가
+  titles.push({ emoji: '⭐', text: `${keyword} 베스트 모음.zip`, tag: '모음' });
+  titles.push({ emoji: '🫶', text: `나만 알고 싶은 ${keyword}`, tag: '비밀' });
+  titles.push({ emoji: '📌', text: `${keyword} 총정리 (이거 하나면 끝)`, tag: '정리' });
+
+  // 중복 제거 + 8개 선별
+  const seen = new Set();
+  const unique = titles.filter(t => {
+    if (seen.has(t.text)) return false;
+    seen.add(t.text);
+    return true;
+  }).slice(0, 8);
+
+  box.innerHTML = unique.map(t => `
+    <div class="flex items-center gap-2 group">
+      <button onclick="copyTitleText(this, '${itemId}')" class="flex-1 text-left px-3 py-2 rounded-lg border border-c hover:border-pink-400 hover:bg-pink-50 dark:hover:bg-pink-950 transition-all text-sm cursor-pointer">
+        ${t.emoji} ${t.text}
+      </button>
+      <span class="text-[10px] text-muted bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded flex-shrink-0">${t.tag}</span>
+    </div>
+  `).join('');
+}
+
+function copyTitleText(btn, itemId) {
+  const text = btn.textContent.trim();
+  navigator.clipboard.writeText(text).then(() => {
+    // 복사 피드백
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<span class="text-green-500 font-bold">✅ 복사됨!</span>';
+    btn.classList.add('border-green-400', 'bg-green-50', 'dark:bg-green-950');
+    setTimeout(() => {
+      btn.innerHTML = orig;
+      btn.classList.remove('border-green-400', 'bg-green-50', 'dark:bg-green-950');
+    }, 1500);
+  });
+  // 아이템 title도 업데이트
+  const it = items.find(x => x.id === itemId);
+  if (it) {
+    it.title = text;
+    save();
+  }
+}
+
+// ── LOOK 그룹 편집기 (1 LOOK = 여러 제품 묶음) ──
+
+// 기존 호환용: 플랫 LOOK 개수 (캡션 탭 등에서 사용)
+function parseLooksArray(productList) {
+  return parseLooksGrouped(productList);
+}
+
+// productList → LOOK 그룹 배열 파싱 (룩당 다중 제품)
+// 반환: [{products: [{brand, productId, url, price}]}]
+function parseLooksGrouped(productList) {
+  if (!productList || !productList.trim()) return [];
+  // 🎀 LOOK N 마커로 분리
+  const sections = productList.split(/(?=🎀\s*LOOK\s*\d+)/i).filter(s => /🎀/.test(s));
+  if (sections.length === 0) return [];
+
+  return sections.map(section => {
+    const body = section.replace(/^🎀\s*LOOK\s*\d+\s*/i, '').trim();
+    if (!body) return { products: [] };
+    const products = [];
+    const lines = body.split('\n');
+    let cur = null;
+    for (const raw of lines) {
+      const line = raw.trim();
+      if (!line) continue;
+      if (/^🔗\s*https?:/.test(line)) {
+        if (cur) { const m = line.match(/🔗\s*(https?:\/\/[^\s]+)/); if (m) cur.url = m[1]; }
+        continue;
+      }
+      // 제품 정보 줄 감지: 🆔 또는 | 가 있거나 영문/한글 브랜드명
+      if (/🆔/.test(line) || /\|/.test(line) || /[A-Za-z가-힣]{2,}/.test(line)) {
+        if (cur) products.push(cur);
+        const brandM = line.match(/^([^|🆔💰]+)/);
+        const idM = line.match(/🆔\s*(\d+)/);
+        const priceM = line.match(/💰\s*([\d,]+)\s*원/);
+        cur = {
+          brand: brandM ? brandM[1].trim() : '',
+          productId: idM ? idM[1] : '',
+          price: priceM ? priceM[1] : '',
+          url: ''
+        };
+      }
+    }
+    if (cur) products.push(cur);
+    return { products };
+  });
+}
+
+// LOOK 그룹 배열 → productList 텍스트 (그룹별 다중 제품)
+function rebuildProductList(lookGroups) {
+  return lookGroups.map((look, i) => {
+    const header = `🎀 LOOK ${i + 1}`;
+    if (!look.products || look.products.length === 0) return header;
+    const lines = look.products.map(p => {
+      const parts = [];
+      if (p.brand) parts.push(p.brand);
+      if (p.productId) parts.push(`🆔 ${p.productId}`);
+      if (p.price) parts.push(`💰 ${p.price}원`);
+      return parts.join(' | ') + (p.url ? '\n🔗 ' + p.url : '');
+    });
+    return header + '\n' + lines.join('\n');
+  }).join('\n\n');
+}
+
+// 전체 제품을 플랫 배열로 추출 (제품 풀용)
+function getAllProducts(productList) {
+  const groups = parseLooksGrouped(productList);
+  const all = [];
+  groups.forEach((g, gi) => {
+    g.products.forEach((p, pi) => {
+      all.push({ ...p, lookIdx: gi, prodIdx: pi });
+    });
+  });
+  return all;
+}
+
+// LOOK 편집기에 캡션 텍스트 붙여넣기 → 자동 파싱
+function handleLookEditorPaste(e, itemId) {
+  const text = (e.clipboardData || window.clipboardData).getData('text');
+  if (!text || text.trim().length < 10) return;
+  const brief = parseSHEINBrief(text);
+  if (brief && brief.productList) {
+    e.preventDefault();
+    const it = items.find(x => x.id === itemId);
+    if (!it) return;
+    if (brief.searchKeywords) it.searchKeywords = brief.searchKeywords;
+    if (brief.couponCode) it.couponCode = brief.couponCode;
+    if (brief.guide) it.guide = brief.guide;
+    it.productList = brief.productList;
+    delete it.customCaption;
+    save();
+    refreshLookEditor(itemId);
+    const toast = document.createElement('div');
+    toast.className = 'fixed top-4 left-1/2 -translate-x-1/2 z-[999] bg-green-600 text-white px-5 py-3 rounded-xl shadow-2xl text-sm font-bold';
+    toast.innerHTML = `✅ ${brief.lookCount}개 제품 파싱 완료! LOOK 개수 설정 후 배치하세요`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+    if (brief.lookCount > 0) showPriceInputPopup(brief, itemId);
+    return;
+  }
+  if (/🎀\s*LOOK\s*\d+/i.test(text)) {
+    e.preventDefault();
+    const it = items.find(x => x.id === itemId);
+    if (!it) return;
+    it.productList = text.trim();
+    delete it.customCaption; save(); refreshLookEditor(itemId);
+    return;
+  }
+  const formatted = autoFormatProductList(text);
+  if (formatted) {
+    e.preventDefault();
+    const it = items.find(x => x.id === itemId);
+    if (!it) return;
+    it.productList = formatted;
+    delete it.customCaption; save(); refreshLookEditor(itemId);
+  }
+}
+
+// ── LOOK 개수 설정 ──
+function initLookSlots(itemId, count) {
+  const it = items.find(x => x.id === itemId);
+  if (!it || count < 1 || count > 30) return;
+
+  const oldGroups = parseLooksGrouped(it.productList);
+  const oldImgs = rebuildProdImgMap(it, oldGroups);
+
+  // 기존 모든 제품을 플랫으로 꺼냄
+  const allProds = getAllProducts(it.productList);
+  const newGroups = [];
+  for (let i = 0; i < count; i++) {
+    newGroups.push({ products: [] });
+  }
+  // 제품들을 순서대로 배분 (기존 LOOK 유지, 넘치면 마지막 LOOK에)
+  allProds.forEach((p, idx) => {
+    const targetLook = Math.min(p.lookIdx, count - 1);
+    newGroups[targetLook].products.push({ brand: p.brand, productId: p.productId, url: p.url, price: p.price });
+  });
+
+  it.productList = rebuildProductList(newGroups);
+  it.lookCount = count;
+  // 이미지 키 재매핑
+  remapProdImages(it, oldImgs, newGroups, null);
+  delete it.customCaption;
+  save();
+  refreshLookEditor(itemId);
+}
+
+// ── 제품 복제 ──
+function duplicateProduct(itemId, lookIdx, prodIdx) {
+  const it = items.find(x => x.id === itemId);
+  if (!it) return;
+  const groups = parseLooksGrouped(it.productList);
+  const prod = groups[lookIdx]?.products?.[prodIdx];
+  if (!prod) return;
+  // 같은 LOOK에 복제 추가
+  groups[lookIdx].products.splice(prodIdx + 1, 0, {...prod});
+  it.productList = rebuildProductList(groups);
+  // 이미지도 복제
+  if (it.prodImages) {
+    const srcKey = lookIdx + '_' + prodIdx;
+    const newKey = lookIdx + '_' + (prodIdx + 1);
+    if (it.prodImages[srcKey]) {
+      // 기존 이미지 키 재정렬 (뒤에 있는 것들 밀기)
+      const allProds = groups[lookIdx].products;
+      for (let i = allProds.length - 1; i > prodIdx + 1; i--) {
+        const ok = lookIdx + '_' + (i - 1);
+        const nk = lookIdx + '_' + i;
+        if (it.prodImages[ok]) { it.prodImages[nk] = it.prodImages[ok]; delete it.prodImages[ok]; }
+      }
+      it.prodImages[newKey] = it.prodImages[srcKey];
+    }
+  }
+  save(); refreshLookEditor(itemId);
+}
+
+// ── 제품을 다른 LOOK으로 이동 ──
+function moveProductToLook(itemId, fromLookIdx, fromProdIdx, toLookIdx) {
+  const it = items.find(x => x.id === itemId);
+  if (!it) return;
+  // 이동 전: 화면에 입력된 가격을 먼저 반영 (안 저장된 인풋 값 수집)
+  const groups = parseLooksGrouped(it.productList);
+  groups.forEach((g, li) => {
+    (g.products || []).forEach((p, pi) => {
+      const inp = document.querySelector(`#lookEditor_${itemId} .look-group[data-look-idx="${li}"] input[onchange*="updateProductPrice"][onchange*=",${li},${pi},"]`);
+      if (inp && inp.value) {
+        const num = inp.value.replace(/[^\d]/g, '');
+        if (num) p.price = Number(num).toLocaleString('ko-KR');
+      }
+    });
+  });
+  it.productList = rebuildProductList(groups);
+  // 다시 파싱 (가격 반영됨)
+  const updatedGroups = parseLooksGrouped(it.productList);
+  if (!updatedGroups[fromLookIdx] || !updatedGroups[fromLookIdx].products[fromProdIdx]) return;
+  if (!updatedGroups[toLookIdx]) return;
+  // 이미지도 함께 이동
+  const oldKey = fromLookIdx + '_' + fromProdIdx;
+  const img = it.prodImages?.[oldKey] || null;
+  // 이동 전 기존 키 맵 snapshot
+  const oldImgs = rebuildProdImgMap(it, updatedGroups);
+  const [prod] = updatedGroups[fromLookIdx].products.splice(fromProdIdx, 1);
+  updatedGroups[toLookIdx].products.push(prod);
+  it.productList = rebuildProductList(updatedGroups);
+  // 이미지 키 재매핑
+  remapProdImages(it, oldImgs, updatedGroups, {movedImg: img, toLookIdx: toLookIdx, toProdIdx: updatedGroups[toLookIdx].products.length - 1});
+  delete it.customCaption;
+  save();
+  refreshLookEditor(itemId);
+}
+
+// ── LOOK 그룹 순서 변경 (드래그) ──
+function reorderLook(itemId, fromIdx, toIdx) {
+  const it = items.find(x => x.id === itemId);
+  if (!it) return;
+  const groups = parseLooksGrouped(it.productList);
+  if (fromIdx < 0 || fromIdx >= groups.length || toIdx < 0 || toIdx >= groups.length || fromIdx === toIdx) return;
+  // 이동 전 이미지 snapshot
+  const oldImgs = rebuildProdImgMap(it, groups);
+  const [moved] = groups.splice(fromIdx, 1);
+  groups.splice(toIdx, 0, moved);
+  it.productList = rebuildProductList(groups);
+  // 이미지 키 재매핑 (LOOK 순서 바뀜)
+  remapProdImages(it, oldImgs, groups, null);
+  delete it.customCaption; save(); refreshLookEditor(itemId);
+}
+
+// ── 제품 가격 업데이트 ──
+function updateProductPrice(itemId, lookIdx, prodIdx, priceStr) {
+  const it = items.find(x => x.id === itemId);
+  if (!it) return;
+  const groups = parseLooksGrouped(it.productList);
+  if (!groups[lookIdx]?.products?.[prodIdx]) return;
+  const num = priceStr.replace(/[^\d]/g, '');
+  groups[lookIdx].products[prodIdx].price = num ? Number(num).toLocaleString('ko-KR') : '';
+  it.productList = rebuildProductList(groups);
+  delete it.customCaption; delete it.partCaptions; save();
+  // 캡션 영역 갱신 (단일 + 편별 모두)
+  const cb = document.getElementById('captionClean_' + itemId);
+  if (cb) cb.value = generateCaption(it);
+  const dc = document.getElementById('detailCaptionArea_' + itemId);
+  if (dc) dc.innerHTML = buildDetailCaptionHTML(it);
+}
+// 기존 호환
+function updateLookPrice(a,b,c) { updateProductPrice(a,b,0,c); }
+
+// ── LOOK 에디터 갱신 ──
+function refreshLookEditor(itemId) {
+  const it = items.find(x => x.id === itemId);
+  if (!it) return;
+  const el = document.getElementById('lookEditor_' + itemId);
+  if (el) el.innerHTML = buildLookCards(it);
+  const ps = document.getElementById('partSplitUI_' + itemId);
+  if (ps) ps.innerHTML = buildPartSplitUI(it);
+  const vl = document.getElementById('videoLinksSection_' + itemId);
+  if (vl) vl.innerHTML = buildVideoLinksUI(it);
+  // 상세 모달 캡션 영역 갱신 (편별 캡션 포함)
+  const dc = document.getElementById('detailCaptionArea_' + itemId);
+  if (dc) dc.innerHTML = buildDetailCaptionHTML(it);
+  const cb = document.getElementById('captionClean_' + itemId);
+  if (cb) cb.value = generateCaption(it);
+  // LOOK 개수 인풋도 갱신
+  const ci = document.getElementById('lookCount_' + itemId);
+  if (ci) ci.value = parseLooksGrouped(it.productList).length || '';
+}
+
+// 드래그 상태
+let dragProdFrom = null; // {lookIdx, prodIdx, itemId}
+
+// ── 제품별 이미지 (prodImages: {"lookIdx_prodIdx": "dataUrl"}) ──
+// 기존 lookImages → prodImages 마이그레이션
+function migrateLookImages(it) {
+  if (!it.lookImages || it.prodImages) return;
+  const groups = parseLooksGrouped(it.productList);
+  it.prodImages = {};
+  Object.keys(it.lookImages).forEach(lookIdx => {
+    const imgs = it.lookImages[lookIdx];
+    const arr = typeof imgs === 'string' ? [imgs] : (Array.isArray(imgs) ? imgs : []);
+    const prods = groups[lookIdx]?.products || [];
+    arr.forEach((src, j) => {
+      if (j < prods.length) it.prodImages[lookIdx + '_' + j] = src;
+    });
+  });
+  delete it.lookImages;
+}
+function getProdImg(it, lookIdx, prodIdx) {
+  migrateLookImages(it);
+  if (!it.prodImages) return null;
+  return it.prodImages[lookIdx + '_' + prodIdx] || null;
+}
+function saveProdImage(itemId, lookIdx, prodIdx, dataUrl) {
+  const it = items.find(x => x.id === itemId);
+  if (!it) return;
+  migrateLookImages(it);
+  if (!it.prodImages) it.prodImages = {};
+  it.prodImages[lookIdx + '_' + prodIdx] = dataUrl;
+  save(); refreshLookEditor(itemId);
+}
+function removeProdImage(itemId, lookIdx, prodIdx) {
+  const it = items.find(x => x.id === itemId);
+  if (!it || !it.prodImages) return;
+  delete it.prodImages[lookIdx + '_' + prodIdx];
+  save(); refreshLookEditor(itemId);
+}
+// 이미지 키 매핑 도우미: 변경 전 {brand+id → imgData} 맵 생성
+function rebuildProdImgMap(it, groups) {
+  migrateLookImages(it);
+  const map = [];
+  if (!it.prodImages) return map;
+  groups.forEach((look, li) => {
+    (look.products || []).forEach((p, pi) => {
+      const key = li + '_' + pi;
+      if (it.prodImages[key]) {
+        map.push({ brand: p.brand, productId: p.productId, img: it.prodImages[key] });
+      }
+    });
+  });
+  return map;
+}
+// 변경 후 새 groups 기준으로 prodImages 재구축
+function remapProdImages(it, oldMap, newGroups, extra) {
+  const newImgs = {};
+  // oldMap에 있는 이미지를 새 위치에서 매칭
+  newGroups.forEach((look, li) => {
+    (look.products || []).forEach((p, pi) => {
+      const match = oldMap.find(m => m.brand === p.brand && m.productId === p.productId && m.img);
+      if (match) {
+        newImgs[li + '_' + pi] = match.img;
+        match.img = null; // 중복 사용 방지
+      }
+    });
+  });
+  // extra: moveProductToLook에서 이동된 제품 이미지
+  if (extra && extra.movedImg) {
+    newImgs[extra.toLookIdx + '_' + extra.toProdIdx] = extra.movedImg;
+  }
+  it.prodImages = newImgs;
+}
+function handleProdImageDrop(e, itemId, lookIdx, prodIdx) {
+  e.preventDefault(); e.stopPropagation();
+  const files = e.dataTransfer.files;
+  if (!files?.length) return;
+  const f = files[0];
+  if (f.type.startsWith('image/')) compressProdImage(f, itemId, lookIdx, prodIdx);
+}
+function handleProdImageFile(e, itemId, lookIdx, prodIdx) {
+  const files = e.target.files;
+  if (!files?.length) return;
+  compressProdImage(files[0], itemId, lookIdx, prodIdx);
+}
+function compressProdImage(file, itemId, lookIdx, prodIdx) {
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const img = new Image();
+    img.onload = function() {
+      const c = document.createElement('canvas'); c.width = 120; c.height = 120;
+      const ctx = c.getContext('2d');
+      const min = Math.min(img.width, img.height);
+      ctx.drawImage(img, (img.width-min)/2, (img.height-min)/2, min, min, 0, 0, 120, 120);
+      saveProdImage(itemId, lookIdx, prodIdx, c.toDataURL('image/jpeg', 0.7));
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+// LOOK 카드에 파일 드롭 시 (이미지 → 첫 번째 빈 제품에 배정)
+function handleLookImageDrop(e, itemId, lookIdx) {
+  e.preventDefault(); e.stopPropagation();
+  const files = e.dataTransfer.files;
+  if (!files?.length) return;
+  const it = items.find(x => x.id === itemId);
+  if (!it) return;
+  const groups = parseLooksGrouped(it.productList);
+  const prods = groups[lookIdx]?.products || [];
+  // 이미지 없는 첫 번째 제품에 배정
+  let targetProd = prods.findIndex((_, pi) => !getProdImg(it, lookIdx, pi));
+  if (targetProd < 0) targetProd = 0;
+  const f = files[0];
+  if (f.type.startsWith('image/')) compressProdImage(f, itemId, lookIdx, targetProd);
+}
+
+// ── 이미지 복붙 (Ctrl+V) 지원 ──
+let _pasteTarget = null; // {itemId, lookIdx, prodIdx}
+
+function setPasteTarget(itemId, lookIdx, prodIdx) {
+  _pasteTarget = { itemId, lookIdx, prodIdx };
+  // 시각적 포커스 표시
+  document.querySelectorAll('.paste-focus').forEach(el => el.classList.remove('paste-focus'));
+  const el = document.getElementById('prodImgSlot_' + itemId + '_' + lookIdx + '_' + prodIdx);
+  if (el) el.classList.add('paste-focus');
+}
+
+document.addEventListener('paste', function(e) {
+  const clipItems = e.clipboardData?.items;
+  if (!clipItems) return;
+  let imgFile = null;
+  for (const ci of clipItems) {
+    if (ci.type.startsWith('image/')) { imgFile = ci.getAsFile(); break; }
+  }
+  if (!imgFile) return;
+  e.preventDefault();
+
+  if (_pasteTarget) {
+    compressProdImage(imgFile, _pasteTarget.itemId, _pasteTarget.lookIdx, _pasteTarget.prodIdx);
+    _pasteTarget = null;
+    return;
+  }
+
+  // 열려있는 상세 모달에서 첫 번째 빈 슬롯 찾기
+  const openModal = document.querySelector('[id^="detail_"]:not(.hidden)');
+  if (!openModal) return;
+  const itemId = openModal.id.replace('detail_', '');
+  const it = items.find(x => x.id === itemId);
+  if (!it) return;
+  const groups = parseLooksGrouped(it.productList);
+  for (let li = 0; li < groups.length; li++) {
+    const prods = groups[li]?.products || [];
+    for (let pi = 0; pi < prods.length; pi++) {
+      if (!getProdImg(it, li, pi)) {
+        compressProdImage(imgFile, itemId, li, pi);
+        return;
+      }
+    }
+  }
+});
+
+// ── 편 나누기 (Part Split) ──
+function getPartRanges(it) {
+  const groups = parseLooksGrouped(it.productList);
+  const total = groups.length;
+  if (!it.partSplits || it.partSplits.length === 0 || total === 0) return [];
+  const splits = [...new Set(it.partSplits)].sort((a, b) => a - b).filter(s => s > 0 && s < total);
+  if (splits.length === 0) return [];
+  const ranges = [];
+  let start = 0;
+  splits.forEach((s, i) => {
+    ranges.push({ part: i + 1, from: start, to: s - 1 });
+    start = s;
+  });
+  ranges.push({ part: splits.length + 1, from: start, to: total - 1 });
+  return ranges;
+}
+
+function togglePartSplit(itemId) {
+  const it = items.find(x => x.id === itemId);
+  if (!it) return;
+  const groups = parseLooksGrouped(it.productList);
+  if (groups.length < 2) return alert('LOOK이 2개 이상일 때 나눌 수 있어요!');
+  const panel = document.getElementById('partSplitPanel_' + itemId);
+  if (panel) { panel.classList.toggle('hidden'); return; }
+}
+
+function setPartCount(itemId, numParts) {
+  const it = items.find(x => x.id === itemId);
+  if (!it) return;
+  const total = parseLooksGrouped(it.productList).length;
+  if (numParts <= 1) {
+    delete it.partSplits;
+  } else {
+    // 2편: 절반으로 나누기
+    const mid = Math.round(total / 2);
+    it.partSplits = mid > 0 && mid < total ? [mid] : [];
+  }
+  save(); refreshLookEditor(itemId);
+}
+
+function updatePartSplit(itemId, splitIdx, val) {
+  const it = items.find(x => x.id === itemId);
+  if (!it || !it.partSplits) return;
+  const total = parseLooksGrouped(it.productList).length;
+  const v = parseInt(val);
+  if (isNaN(v) || v < 1 || v >= total) return;
+  // 중복 방지
+  if (it.partSplits.some((s, i) => i !== splitIdx && s === v)) return;
+  it.partSplits[splitIdx] = v;
+  save(); refreshLookEditor(itemId);
+}
+
+function buildPartSplitUI(it) {
+  const groups = parseLooksGrouped(it.productList);
+  const total = groups.length;
+  if (total < 2) return '';
+  const ranges = getPartRanges(it);
+  const hasSplits = it.partSplits && it.partSplits.length > 0;
+
+  return `
+  <div class="mt-1.5 mb-2">
+    <div class="flex items-center gap-2 flex-wrap">
+      <span class="text-[10px] font-bold text-muted">✂️ 편 나누기</span>
+      <div class="flex gap-1">
+        <button onclick="setPartCount('${it.id}',1)"
+          class="px-3 h-7 rounded-lg text-[10px] font-black transition-colors ${!hasSplits ? 'bg-pink-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-muted hover:bg-pink-100 dark:hover:bg-pink-900'}">없음</button>
+        <button onclick="setPartCount('${it.id}',2)"
+          class="px-3 h-7 rounded-lg text-[10px] font-black transition-colors ${hasSplits ? 'bg-pink-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-muted hover:bg-pink-100 dark:hover:bg-pink-900'}">2편</button>
+      </div>
+      ${hasSplits ? `<span class="text-[10px] text-muted">·</span>
+        <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-pink-100 dark:bg-pink-900 text-pink-600 dark:text-pink-300">1편 LOOK ${ranges[0].from+1}~${ranges[0].to+1}</span>
+        <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-pink-100 dark:bg-pink-900 text-pink-600 dark:text-pink-300">2편 LOOK ${ranges[1] ? ranges[1].from+1 : '?'}~${ranges[1] ? ranges[1].to+1 : '?'}</span>` : ''}
+    </div>
+    ${hasSplits ? `<div class="flex items-center gap-2 mt-1.5">
+      <span class="text-[9px] text-muted">1편 LOOK 개수:</span>
+      <input type="number" value="${it.partSplits[0]}" min="1" max="${total-1}"
+        class="w-11 px-1 py-0.5 rounded text-[10px] text-center border border-c bg-white dark:bg-gray-900 focus:border-pink-400 outline-none font-bold"
+        onchange="updatePartSplit('${it.id}',0,this.value)" />
+      <span class="text-[9px] text-muted">개 (나머지 → 2편)</span>
+    </div>` : ''}
+  </div>`;
+}
+
+// ── 편별 영상 링크 UI ──
+function buildVideoLinksUI(it) {
+  const ranges = getPartRanges(it);
+  const hasParts = ranges.length > 0;
+  if (!it.videoLinks) it.videoLinks = {};
+
+  if (!hasParts) {
+    // 편 나누기 안 한 경우: 단일 영상 링크
+    const val = it.videoLinks['0'] || it.videoLink || '';
+    return `
+      <p class="text-xs text-muted mb-2">🎬 영상 링크 (공개 — 룩북에 표시)</p>
+      <div class="flex items-center gap-2">
+        <input type="text" value="${val}" placeholder="유튜브, 틱톡, 인스타 영상 URL"
+          class="input flex-1 px-3 py-2 rounded-lg text-sm"
+          onchange="saveVideoLink('${it.id}','0',this.value)" />
+        ${val ? `<a href="${val}" target="_blank" class="flex-shrink-0 px-2 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-pink-100 dark:hover:bg-pink-900 text-xs transition-colors" title="링크 열기">↗</a>` : ''}
+      </div>`;
+  }
+
+  // 편별 영상 링크
+  return `
+    <p class="text-xs text-muted mb-2">🎬 편별 영상 링크 (공개 — 룩북에 표시)</p>
+    <div class="space-y-2">
+      ${ranges.map(r => {
+        const val = it.videoLinks[String(r.part)] || '';
+        return `<div class="flex items-center gap-2">
+          <span class="text-xs font-bold text-pink-500 w-10 flex-shrink-0">${r.part}편</span>
+          <input type="text" value="${val}" placeholder="LOOK ${r.from+1}~${r.to+1} 영상 URL"
+            class="input flex-1 px-3 py-2 rounded-lg text-sm"
+            onchange="saveVideoLink('${it.id}','${r.part}',this.value)" />
+          ${val ? `<a href="${val}" target="_blank" class="flex-shrink-0 px-2 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-pink-100 dark:hover:bg-pink-900 text-xs transition-colors" title="링크 열기">↗</a>` : ''}
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function saveVideoLink(itemId, partKey, url) {
+  const it = items.find(x => x.id === itemId);
+  if (!it) return;
+  if (!it.videoLinks) it.videoLinks = {};
+  if (url.trim()) {
+    it.videoLinks[partKey] = url.trim();
+  } else {
+    delete it.videoLinks[partKey];
+  }
+  // 하위호환: videoLink도 동기화
+  if (partKey === '0') it.videoLink = url.trim();
+  save();
+  // UI 갱신 (열기 버튼 표시)
+  const vl = document.getElementById('videoLinksSection_' + itemId);
+  if (vl) vl.innerHTML = buildVideoLinksUI(it);
+}
+
+// ── LOOK 그룹 카드 HTML 생성 ──
+function buildLookCards(it) {
+  migrateLookImages(it);
+  const groups = parseLooksGrouped(it.productList);
+  if (groups.length === 0) return `<div class="text-center py-8 space-y-3">
+    <p class="text-3xl opacity-30">🎀</p>
+    <p class="text-xs text-muted">LOOK 개수 입력 후 [생성] 클릭!<br>또는 캡션을 여기에 붙여넣기</p>
+  </div>`;
+
+  const totalLooks = groups.length;
+  const splitSet = new Set(it.partSplits || []);
+  const ranges = getPartRanges(it);
+
+  // 편별 LOOK 번호 계산용
+  function getDisplayNum(li) {
+    if (ranges.length === 0) return li + 1;
+    const range = ranges.find(r => li >= r.from && li <= r.to);
+    return range ? (li - range.from + 1) : (li + 1);
+  }
+  function getPartLabel(li) {
+    if (ranges.length === 0) return '';
+    const range = ranges.find(r => li >= r.from && li <= r.to);
+    return range ? `${range.part}편` : '';
+  }
+
+  return groups.map((look, li) => {
+    // 편 구분선 삽입
+    let partDivider = '';
+    if (splitSet.size > 0 && splitSet.has(li)) {
+      const partNum = ranges.findIndex(r => r.from === li);
+      if (partNum >= 0) {
+        partDivider = `<div class="flex items-center gap-2 py-1.5 my-1">
+          <div class="flex-1 h-px bg-gradient-to-r from-transparent via-pink-400 to-transparent"></div>
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-pink-500 text-white whitespace-nowrap">✂️ ${partNum + 1}편 시작</span>
+          <div class="flex-1 h-px bg-gradient-to-r from-transparent via-pink-400 to-transparent"></div>
+        </div>`;
+      }
+    }
+    const displayNum = getDisplayNum(li);
+    const partLabel = getPartLabel(li);
+    const prods = look.products || [];
+    const isEmpty = prods.length === 0;
+
+    // 제품 행들 (각 제품에 이미지 포함)
+    const prodRows = prods.map((p, pi) => {
+      const img = getProdImg(it, li, pi);
+      const imgCell = img
+        ? `<div class="relative group/img flex-shrink-0">
+            <img src="${img}" alt="" class="w-11 h-11 rounded-lg object-cover border border-c">
+            <button onclick="event.stopPropagation();removeProdImage('${it.id}',${li},${pi})" class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[8px] flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity">✕</button>
+          </div>`
+        : `<div id="prodImgSlot_${it.id}_${li}_${pi}" class="w-11 h-11 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center cursor-pointer hover:border-pink-400 transition-colors flex-shrink-0"
+            onclick="event.stopPropagation();setPasteTarget('${it.id}',${li},${pi});document.getElementById('prodImgF_${it.id}_${li}_${pi}').click()"
+            ondragover="event.preventDefault();event.stopPropagation();this.classList.add('border-pink-400','bg-pink-50')"
+            ondragleave="this.classList.remove('border-pink-400','bg-pink-50')"
+            ondrop="event.stopPropagation();this.classList.remove('border-pink-400','bg-pink-50');handleProdImageDrop(event,'${it.id}',${li},${pi})"
+            title="클릭 후 Ctrl+V로 붙여넣기 가능">
+            <span class="text-[9px] opacity-30">📷</span>
+            <input type="file" id="prodImgF_${it.id}_${li}_${pi}" accept="image/*" class="hidden" onchange="handleProdImageFile(event,'${it.id}',${li},${pi})" />
+          </div>`;
+      return `
+      <div class="prod-row flex items-center gap-1.5 py-1 px-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 group/prod cursor-grab"
+        draggable="true"
+        ondragstart="event.stopPropagation();dragProdFrom={lookIdx:${li},prodIdx:${pi},itemId:'${it.id}'};this.classList.add('opacity-40');event.dataTransfer.effectAllowed='move'"
+        ondragend="this.classList.remove('opacity-40')">
+        ${imgCell}
+        <span class="text-[9px] text-muted opacity-30 group-hover/prod:opacity-100">⠿</span>
+        <div class="flex-1 min-w-0">
+          <span class="text-[11px] font-semibold">${p.brand || '제품'}</span>
+          ${p.productId ? `<span class="text-[9px] text-muted ml-1">🆔${p.productId}</span>` : ''}
+        </div>
+        <input type="text" value="${p.price}" placeholder="₩"
+          class="w-16 px-1.5 py-0.5 rounded text-[10px] text-right border border-c bg-white dark:bg-gray-900 focus:border-pink-400 outline-none"
+          onclick="event.stopPropagation()" draggable="false"
+          onchange="updateProductPrice('${it.id}',${li},${pi},this.value)" />
+        ${p.url ? `<a href="${p.url}" class="text-[10px] text-blue-400 hover:text-blue-300 flex-shrink-0" onclick="event.stopPropagation();event.preventDefault();openProductPreview(this.href)" draggable="false">🔗</a>` : ''}
+        <select class="text-[9px] bg-transparent border border-c rounded px-1 py-0.5 cursor-pointer w-12 text-center"
+          onclick="event.stopPropagation()" draggable="false"
+          onchange="moveProductToLook('${it.id}',${li},${pi},Number(this.value))">
+          ${Array.from({length:totalLooks},(_, k) => `<option value="${k}" ${k===li?'selected':''}>${k+1}</option>`).join('')}
+        </select>
+        <button onclick="event.stopPropagation();duplicateProduct('${it.id}',${li},${pi})" class="text-[9px] opacity-0 group-hover/prod:opacity-60 hover:!opacity-100 transition-opacity" title="제품 복제" draggable="false">📋</button>
+      </div>`;
+    }).join('');
+
+    return `${partDivider}
+    <div class="look-group rounded-xl border-2 ${isEmpty ? 'border-dashed border-gray-300 dark:border-gray-600' : 'border-pink-200 dark:border-pink-800'} bg-white dark:bg-gray-900 overflow-hidden transition-all"
+      draggable="true" data-look-idx="${li}"
+      ondragstart="if(dragProdFrom)return;event.dataTransfer.effectAllowed='move';this.classList.add('opacity-40','scale-[0.98]')"
+      ondragend="this.classList.remove('opacity-40','scale-[0.98]')"
+      ondragover="event.preventDefault();this.classList.add('ring-2','ring-pink-400')"
+      ondragleave="this.classList.remove('ring-2','ring-pink-400')"
+      ondrop="event.preventDefault();this.classList.remove('ring-2','ring-pink-400');if(event.dataTransfer.files?.length){handleLookImageDrop(event,'${it.id}',${li});return;}if(dragProdFrom&&dragProdFrom.itemId==='${it.id}'){moveProductToLook('${it.id}',dragProdFrom.lookIdx,dragProdFrom.prodIdx,${li});dragProdFrom=null;return;}">
+      <!-- LOOK 헤더 -->
+      <div class="flex items-center gap-2 px-3 py-2 bg-pink-50/50 dark:bg-pink-950/30 border-b border-c cursor-grab">
+        <span class="text-muted text-xs opacity-40">⠿</span>
+        <span class="w-6 h-6 rounded-lg bg-pink-500 text-white flex items-center justify-center text-[11px] font-black">${displayNum}</span>
+        <span class="text-xs font-bold flex-1">LOOK ${displayNum}</span>
+        ${partLabel ? `<span class="text-[9px] font-bold text-pink-400">${partLabel}</span>` : ''}
+        <span class="text-[10px] text-muted">${prods.length}개</span>
+      </div>
+      <!-- 제품 목록 (각 제품에 이미지 포함) -->
+      <div class="p-2 space-y-0.5">
+        ${prodRows || `<p class="text-[10px] text-muted text-center py-2 opacity-50">제품을 여기로 드래그하거나<br>LOOK# 선택으로 배치</p>`}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// LOOK 링크 버튼 바 생성 (캡션 위에 클릭 가능한 링크들)
+function extractLookLinks(productList, captionText) {
+  // 두 소스 모두 합쳐서 검색 (하나만 보면 누락됨)
+  const combined = [(productList||''), (captionText||'')].join('\n');
+  if (!combined.trim()) return '';
+
+  // 1차: 🔗 이모지 뒤 URL 추출
+  let urlMatches = [...combined.matchAll(/🔗\s*(https?:\/\/[^\s]+)/g)];
+
+  // 2차: 🔗 없으면 일반 URL도 추출 (shein, shopee 등 쇼핑몰 링크 포함)
+  if (urlMatches.length === 0) {
+    const plainUrls = [...combined.matchAll(/(https?:\/\/[^\s,)]+)/g)];
+    // 중복 제거
+    const seen = new Set();
+    urlMatches = plainUrls.filter(m => {
+      const u = m[1].replace(/[.,;:!?]+$/, '');
+      if (seen.has(u)) return false;
+      seen.add(u);
+      m[1] = u;
+      return true;
+    });
+  }
+
+  if (urlMatches.length === 0) return '';
+
+  // LOOK 블록에서 브랜드명도 추출 시도
+  const blocks = combined.split(/(?=🎀\s*LOOK\s*\d+)/).filter(b => /🎀/.test(b));
+
+  const links = urlMatches.map((m, i) => {
+    const url = m[1];
+    let brand = '';
+    if (blocks[i]) {
+      const bm = blocks[i].match(/🎀\s*LOOK\s*\d+[\n\r]+([^|🆔🔗\n]+)/);
+      if (bm) brand = bm[1].trim();
+    }
+    return `<a href="${url}" onclick="event.preventDefault();openProductPreview(this.href)" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-white dark:bg-gray-800 border border-c hover:border-pink-400 hover:bg-pink-50 dark:hover:bg-pink-950 hover:text-pink-500 transition-all" title="${brand || 'LOOK '+(i+1)}">
+      <span class="w-5 h-5 rounded-md bg-pink-100 dark:bg-pink-900 text-pink-500 flex items-center justify-center text-[10px] font-black">${i+1}</span>
+      <span class="text-[10px]">🔗</span>
+    </a>`;
+  });
+
+  return `<div class="flex flex-wrap gap-1.5 mb-2 p-2 rounded-xl bg-white/50 dark:bg-gray-800/50 border border-c">
+    <span class="text-[10px] text-muted self-center font-bold mr-1">🛒 LOOK 바로가기</span>
+    ${links.join('')}
+  </div>`;
+}
+
+// 편별 productList 추출 (LOOK fromIdx ~ toIdx)
+function getPartProductList(it, fromIdx, toIdx) {
+  const sections = (it.productList || '').split(/(?=🎀\s*LOOK\s*\d+)/i).filter(s => /🎀/.test(s));
+  if (sections.length === 0) return '';
+  const partSections = sections.slice(fromIdx, toIdx + 1);
+  // LOOK 번호를 1부터 다시 매기기
+  return partSections.map((s, i) => {
+    return s.replace(/🎀\s*LOOK\s*\d+/i, `🎀 LOOK ${i + 1}`);
+  }).join('\n');
+}
+
+function generateCaption(it) {
+  // 사용자가 직접 입력한 캡션이 있으면 그것을 우선 반환
+  if (it.customCaption && it.customCaption.trim()) return it.customCaption;
+
+  // 해시태그 + 멘션 모으기
+  const allText = `${it.guide||''} ${it.memo||''} ${it.pageContent||''}`;
+  const hashtags = [...new Set((allText.match(/#[가-힣A-Za-z0-9_]+/g) || []))];
+  const mentions = [...new Set((allText.match(/@[가-힣A-Za-z0-9_.]{2,30}/g) || []))]
+    .filter(m => !/@(gmail|naver|daum|hotmail|outlook|yahoo|kakao|hanmail|nate|shein\.com|gmail\.com)/i.test(m));
+
+  const tags = hashtags.length ? hashtags.join(' ') : `#${(it.company||'').replace(/\s/g,'')} #광고`;
+  const lines = [];
+
+  // SHEIN 스타일 (검색키워드 + 쿠폰 + 제품리스트 중 하나라도 있으면)
+  const isSHEIN = it.searchKeywords || it.couponCode || it.productList;
+
+  if (isSHEIN) {
+    // 1행: 검색 키워드
+    lines.push(`🔎 검색창 코드 : ${it.searchKeywords || '[ ]'}`);
+    // 2행: 쿠폰 (없으면 [ ] 플레이스홀더)
+    lines.push(`🎟️ 쿠폰: ${it.couponCode || '[ ]'}`);
+    // 3행: 해시태그 (빈줄 없이)
+    lines.push(tags);
+    // 4행: 멘션 (빈줄 없이)
+    if (mentions.length) lines.push(mentions.join(' '));
+    // 빈줄 2개
+    lines.push('');
+    lines.push('');
+    // 📍 헤더
+    lines.push('📍 정보는 요기에!!!');
+    // 빈줄 1개 후 LOOK 리스트
+    lines.push('');
+    if (it.productList) {
+      lines.push(it.productList);
+    }
+  } else {
+    // 일반 캡션: 해시태그 → 멘션 → 가이드라인
+    lines.push(tags);
+    lines.push('');
+    if (mentions.length) {
+      lines.push(mentions.join(' '));
+      lines.push('');
+    }
+    const guideClean = (it.guide||'')
+      .split('\n')
+      .map(l => l.trim())
+      .filter(l => l &&
+        !/^해시태그[:：]/.test(l) &&
+        !/^멘션[:：]/.test(l) &&
+        !/^요건[:：]/.test(l) &&
+        !/^#/.test(l) &&
+        !/^@/.test(l))
+      .map(l => l.replace(/^[•\-*]\s*/, '· '))
+      .join('\n');
+    if (guideClean) {
+      lines.push(guideClean);
+      lines.push('');
+    }
+  }
+
+  return lines.join('\n').trim();
+}
+
+// 상세 모달 캡션 영역 HTML 생성
+function buildDetailCaptionHTML(it) {
+  const ranges = getPartRanges(it);
+  if (ranges.length > 0) {
+    return `<div class="flex items-center justify-between mb-3">
+      <div><p class="text-sm font-bold">📋 캡션 (바로 복붙용)</p>
+      <p class="text-[10px] text-muted">편별로 분리됨 · 각각 복사</p></div>
+    </div>` +
+    ranges.map(r => {
+      const pCaption = generatePartCaption(it, r.part);
+      return `<div class="${r.part > 1 ? 'mt-3 pt-3 border-t border-pink-200 dark:border-pink-800' : ''}">
+        <div class="flex items-center justify-between mb-2">
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-pink-500 text-white">${r.part}편</span>
+          <div class="flex items-center gap-1.5">
+            <span id="captionSaved_detail_${it.id}_${r.part}" class="text-xs text-muted opacity-40">${it.partCaptions?.[String(r.part)] ? '✨' : ''}</span>
+            <button onclick="copyPartCaption('${it.id}',${r.part})" class="bg-black text-white text-[10px] font-semibold px-3 py-1.5 rounded-lg hover:opacity-80">📋 복사</button>
+          </div>
+        </div>
+        <textarea id="captionBox_part_${it.id}_${r.part}" oninput="savePartCaption('${it.id}',${r.part},this.value)" class="w-full p-3 rounded-lg text-xs font-sans border border-c bg-white dark:bg-gray-900" rows="10" ${isShareMode ? 'readonly' : ''}>${safe(pCaption)}</textarea>
+      </div>`;
+    }).join('');
+  } else {
+    return `<div class="flex items-center justify-between mb-3 gap-2">
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-bold">📋 캡션 (바로 복붙용)</p>
+        <p class="text-[10px] text-muted">인스타·유튜브에 그대로 복사</p>
+      </div>
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <span id="captionSaved_${it.id}" class="text-xs text-muted opacity-40 transition-opacity">${it.customCaption ? '✨ 저장됨' : ''}</span>
+        ${!isShareMode ? `
+          <button onclick="manualFormatCaption('${it.id}')" class="card px-2 py-1.5 rounded-lg text-xs" title="LOOK 1/2/3... 형식으로 자동 정리">🪄</button>
+          <button onclick="resetCaption('${it.id}')" class="card px-2 py-1.5 rounded-lg text-xs" title="자동 생성으로 되돌리기">🔄</button>` : ''}
+        <button id="copyBtn_${it.id}" onclick="copyCaption('${it.id}')" class="bg-black text-white text-xs font-semibold px-4 py-2 rounded-lg hover:opacity-80">📋 복사</button>
+      </div>
+    </div>
+    <textarea id="captionClean_${it.id}" oninput="saveCustomCaption('${it.id}', this.value)" onpaste="handleCaptionPaste(event, '${it.id}')" class="w-full p-3 rounded-lg text-sm font-sans border border-c bg-white dark:bg-gray-900 flex-1" rows="18" ${isShareMode ? 'readonly' : ''} placeholder="제품정보 붙여넣기하면 🎀 LOOK 1/2/3... 형식으로 자동 정리돼요!">${safe(generateCaption(it))}</textarea>`;
+  }
+}
+
+// 편별 캡션 생성 (partNum: 1, 2, 3...)
+function generatePartCaption(it, partNum) {
+  const ranges = getPartRanges(it);
+  const range = ranges.find(r => r.part === partNum);
+  if (!range) return generateCaption(it);
+
+  // 편별 커스텀 캡션이 있으면 사용
+  if (it.partCaptions && it.partCaptions[String(partNum)]) return it.partCaptions[String(partNum)];
+
+  const partPL = getPartProductList(it, range.from, range.to);
+  const allText = `${it.guide||''} ${it.memo||''} ${it.pageContent||''}`;
+  const hashtags = [...new Set((allText.match(/#[가-힣A-Za-z0-9_]+/g) || []))];
+  const mentions = [...new Set((allText.match(/@[가-힣A-Za-z0-9_.]{2,30}/g) || []))]
+    .filter(m => !/@(gmail|naver|daum|hotmail|outlook|yahoo|kakao|hanmail|nate|shein\.com|gmail\.com)/i.test(m));
+  const tags = hashtags.length ? hashtags.join(' ') : `#${(it.company||'').replace(/\s/g,'')} #광고`;
+
+  const lines = [];
+  lines.push(`🔎 검색창 코드 : ${it.searchKeywords || '[ ]'}`);
+  lines.push(`🎟️ 쿠폰: ${it.couponCode || '[ ]'}`);
+  lines.push(tags);
+  if (mentions.length) lines.push(mentions.join(' '));
+  lines.push(''); lines.push('');
+  lines.push(`📍 정보는 요기에!!! (${partNum}편)`);
+  lines.push('');
+  if (partPL) lines.push(partPL);
+  return lines.join('\n').trim();
+}
+
+function copyCaption(itemId) {
+  const it = items.find(x => x.id === itemId);
+  if (!it) return;
+  const ta = document.getElementById('captionClean_' + itemId) || document.getElementById('captionBox_' + itemId);
+  const text = ta ? ta.value : generateCaption(it);
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyBtn_' + itemId);
+    if (btn) {
+      const orig = btn.innerHTML;
+      btn.innerHTML = '✅ 복사됨!';
+      btn.style.background = '#16a34a';
+      setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; }, 1800);
+    }
+  });
+}
+
+function openDetail(itemId) {
+  const it = items.find(x => x.id === itemId);
+  if (!it) return;
+  const checks = it.checks || {};
+  const checkList = [
+    ['brief', '브리핑 받음'],
+    ['product', '제품 수령'],
+    ['shoot', '촬영 완료'],
+    ['edit', '편집 완료'],
+    ['approve', '업체 컨펌'],
+    ['upload', '업로드 완료'],
+    ['paid', '정산 완료'],
+  ];
+  const done = checkList.filter(([k]) => checks[k]).length;
+
+  const safe = (s) => (s || '').toString().replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]));
+  const gallery = (it.imageGallery || []).filter(u => u && u !== it.imageUrl).slice(0, 6);
+  const periodText = it.start ? `${it.start} ~ ${it.due}` : it.due;
+  const memoClean = (it.memo && it.memo !== it.pageContent) ? it.memo : '';
+
+  // 2단 레이아웃이므로 항상 넓게
+  const modalBox = document.querySelector('#detailModal > div');
+  if (modalBox) {
+    modalBox.classList.remove('max-w-xl');
+    modalBox.classList.add('max-w-5xl');
+  }
+
+  document.getElementById('detailBody').innerHTML = `
+    <div class="space-y-3">
+
+      <!-- 1. HERO 카드: 이미지 + 회사명 + 캠페인 -->
+      <div class="rounded-2xl overflow-hidden border border-c">
+        <div class="p-4">
+          <div class="flex items-center gap-2 mb-3 flex-wrap">
+            <span class="chip chip-${it.platform}">${platformLabel(it.platform)}</span>
+            <span class="badge badge-${it.status}">${it.status}</span>
+            ${it.price ? `<span class="ml-auto text-sm font-bold">${fmtPrice(it.price)}</span>` : ''}
+          </div>
+          <div class="flex items-start gap-4">
+            <!-- 썸네일 (정사각, 작게) -->
+            ${(it.thumbnail || it.imageUrl) ? `
+              <div class="relative group flex-shrink-0">
+                <img src="${safe(it.thumbnail || it.imageUrl)}" alt="" class="w-20 h-20 rounded-xl object-cover border border-c" onerror="this.parentElement.innerHTML=detailImgMiniPlaceholder('${it.id}')">
+                ${!isShareMode ? `<button onclick="event.stopPropagation();removeDetailImage('${it.id}')" class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">✕</button>` : ''}
+              </div>` : `
+              ${!isShareMode ? `<div class="w-20 h-20 rounded-xl bg-gray-100 dark:bg-gray-800 flex flex-col items-center justify-center cursor-pointer border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-pink-400 transition-colors flex-shrink-0"
+                onclick="document.getElementById('detailImgFile_${it.id}').click()"
+                onpaste="handleDetailImagePaste(event, '${it.id}')"
+                ondragover="event.preventDefault();this.classList.add('border-pink-400')"
+                ondragleave="this.classList.remove('border-pink-400')"
+                ondrop="handleDetailImageDrop(event, '${it.id}')"
+                tabindex="0" title="썸네일 추가">
+                <p class="text-lg opacity-40">📷</p>
+                <p class="text-[8px] text-muted">추가</p>
+                <input type="file" id="detailImgFile_${it.id}" accept="image/*" class="hidden" onchange="handleDetailImageFile(event, '${it.id}')" />
+              </div>` : ''}`}
+            <!-- 회사정보 -->
+            <div class="flex-1 min-w-0">
+              <h2 class="text-xl font-bold leading-tight truncate">${safe(it.company)}</h2>
+              ${it.title ? `<p class="text-sm mt-0.5">${safe(it.title)}</p>` : ''}
+              ${it.product ? `<p class="text-xs text-muted mt-0.5">💝 ${safe(it.product)}</p>` : ''}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. 일정 + 담당자 + 원본 페이지 통합 카드 -->
+      <div class="card rounded-xl p-4 space-y-3">
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <p class="text-xs text-muted mb-1">📅 일정</p>
+            <p class="font-semibold">${periodText}</p>
+          </div>
+          ${it.contact || it.contactInfo ? `
+            <div>
+              <p class="text-xs text-muted mb-1">👤 담당자</p>
+              <p class="font-semibold">${safe(it.contact) || '-'}</p>
+              ${it.contactInfo ? `<p class="text-xs text-muted">${safe(it.contactInfo)}</p>` : ''}
+            </div>` : ''}
+        </div>
+        ${it.link ? `
+          <div class="pt-3 border-t border-c">
+            <p class="text-xs text-muted mb-2">🔒 원본 페이지 (비공개)</p>
+            <a href="${safe(it.link)}" target="_blank" rel="noopener" class="block bg-blue-600 hover:bg-blue-700 text-white text-center font-semibold py-2.5 rounded-lg text-sm transition">📂 새 탭에서 열기 ↗</a>
+            <p class="text-xs text-muted mt-2 break-all">${safe(it.link)}</p>
+          </div>` : ''}
+        <!-- 🎬 공개 영상 링크 (편별) -->
+        <div class="pt-3 border-t border-c" id="videoLinksSection_${it.id}">
+          ${buildVideoLinksUI(it)}
+        </div>
+      </div>
+
+      <!-- 2.5 제목 메이커 -->
+      <div class="card rounded-xl p-4">
+        <p class="text-sm font-bold mb-2">✨ 제목 메이커</p>
+        <p class="text-xs text-muted mb-3">대충 쓰면 → 눈길 사로잡는 제목으로 변환!</p>
+        <div class="flex gap-2 mb-3">
+          <input id="titleInput_${it.id}" class="input flex-1 px-3 py-2 rounded-lg text-sm" placeholder="예: 쉬인 여름 하울" value="${safe(it.title || it.product || '')}" onkeydown="if(event.key==='Enter')generateTitles('${it.id}')" />
+          <button onclick="generateTitles('${it.id}')" class="btn-primary px-4 py-2 rounded-lg text-sm font-bold flex-shrink-0">⚡ 변환</button>
+        </div>
+        <div id="titleResults_${it.id}" class="space-y-1.5 hidden"></div>
+      </div>
+
+      <!-- 3. 캡션 2단 레이아웃: 왼쪽 LOOK 에디터 | 오른쪽 정리된 캡션 -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+
+        <!-- 왼쪽: LOOK 편집기 (항상 표시) -->
+        <div class="rounded-2xl p-4 border-2 border-pink-200 dark:border-pink-800 bg-gradient-to-br from-pink-50/50 to-purple-50/50 dark:from-pink-950/50 dark:to-purple-950/50"
+          onpaste="handleLookEditorPaste(event,'${it.id}')">
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-sm font-bold">🎀 LOOK 편집기</p>
+            <div class="flex items-center gap-1.5">
+              ${!isShareMode && parseLooksArray(it.productList).length > 0 ? `<button onclick="showPriceInputPopup({productList:items.find(x=>x.id==='${it.id}').productList},'${it.id}')" class="px-2 py-1 rounded-lg text-[10px] font-bold bg-pink-100 dark:bg-pink-900 text-pink-600 dark:text-pink-300 hover:bg-pink-200 dark:hover:bg-pink-800 transition-colors" title="한번에 가격 입력">💰 일괄</button>` : ''}
+            </div>
+          </div>
+          <!-- LOOK 개수 입력 -->
+          ${!isShareMode ? `
+          <div class="flex items-center gap-2 mb-3 p-2 rounded-xl bg-white/60 dark:bg-gray-800/60 border border-c">
+            <span class="text-xs font-bold text-pink-500">🎀</span>
+            <span class="text-[11px] font-semibold">LOOK</span>
+            <span class="text-[11px] text-muted">1 ~</span>
+            <input type="number" id="lookCount_${it.id}" value="${parseLooksArray(it.productList).length || ''}" min="1" max="30" placeholder="개수"
+              class="w-14 px-2 py-1 rounded-lg text-xs text-center border border-c bg-white dark:bg-gray-900 focus:border-pink-400 focus:ring-1 focus:ring-pink-400 outline-none font-bold"
+              onkeydown="if(event.key==='Enter'){initLookSlots('${it.id}',Number(this.value));this.blur()}" />
+            <span class="text-[11px] text-muted">번</span>
+            <button onclick="initLookSlots('${it.id}',Number(document.getElementById('lookCount_${it.id}').value))" class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-pink-500 text-white hover:bg-pink-600 transition-colors">생성</button>
+            ${parseLooksGrouped(it.productList).length > 0 ? `<span class="text-[10px] text-pink-500 font-bold ml-auto">${parseLooksGrouped(it.productList).length}룩 · ${getAllProducts(it.productList).length}제품</span>` : ''}
+          </div>` : ''}
+          <p class="text-[9px] text-muted mb-1 opacity-60">제품의 LOOK# 선택으로 그룹 배치 · 사진 드래그 · LOOK 드래그로 순서변경</p>
+          <div id="partSplitUI_${it.id}">${buildPartSplitUI(it)}</div>
+          <div id="lookEditor_${it.id}" class="space-y-1.5 max-h-[450px] overflow-y-auto pr-1">
+            ${buildLookCards(it)}
+          </div>
+        </div>
+
+        <!-- 오른쪽: 정리된 캡션 (복붙용) -->
+        <div class="rounded-2xl p-4 bg-gradient-to-br from-pink-50 to-purple-50 dark:from-pink-950 dark:to-purple-950 border-2 border-pink-200 dark:border-pink-800">
+          <div id="detailCaptionArea_${it.id}">
+          ${buildDetailCaptionHTML(it)}
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. 가이드라인 카드 -->
+      ${it.guide ? `
+        <div class="card rounded-xl p-4 border-l-4 border-yellow-400">
+          <p class="text-sm font-bold mb-2">📝 필수 가이드라인</p>
+          <div class="text-sm whitespace-pre-wrap leading-relaxed">${safe(it.guide)}</div>
+        </div>` : ''}
+
+      <!-- 6. 갤러리 (있으면) -->
+      ${gallery.length > 0 ? `
+        <div class="card rounded-xl p-4">
+          <p class="text-sm font-bold mb-3">🖼️ 캠페인 이미지 (${gallery.length + 1}장)</p>
+          <div class="grid grid-cols-3 gap-2">
+            ${gallery.map(url => `<img src="${safe(url)}" alt="" class="aspect-square object-cover rounded-lg border border-c cursor-pointer hover:scale-105 transition" onclick="window.open('${safe(url)}','_blank')" onerror="this.style.display='none'">`).join('')}
+          </div>
+        </div>` : ''}
+
+      <!-- 7. 진행 체크리스트 카드 -->
+      <div class="card rounded-xl p-4">
+        <div class="flex justify-between items-center mb-3">
+          <p class="text-sm font-bold">✅ 진행 체크리스트</p>
+          <p class="text-xs font-semibold text-muted">${done}/${checkList.length}</p>
+        </div>
+        <div class="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-1.5 mb-3 overflow-hidden">
+          <div class="bg-green-500 h-full rounded-full transition-all" style="width: ${(done/checkList.length*100).toFixed(0)}%"></div>
+        </div>
+        <div class="space-y-1.5">
+          ${checkList.map(([k,label]) => `
+            <label class="flex items-center gap-2 text-sm cursor-pointer p-1 rounded hover:bg-gray-50 dark:hover:bg-gray-900">
+              <input type="checkbox" ${checks[k] ? 'checked' : ''} ${isShareMode ? 'disabled' : ''} onchange="toggleCheck('${it.id}','${k}',this.checked)">
+              <span class="${checks[k] ? 'line-through text-muted' : ''}">${label}</span>
+            </label>`).join('')}
+        </div>
+      </div>
+
+      <!-- 8. 메모 (있으면) -->
+      ${memoClean ? `
+        <div class="card rounded-xl p-4">
+          <p class="text-sm font-bold mb-2">📝 메모</p>
+          <p class="text-sm whitespace-pre-wrap leading-relaxed">${safe(memoClean)}</p>
+        </div>` : ''}
+
+      <!-- 9. 원본 페이지 텍스트 (접혀있음) -->
+      ${it.pageContent ? `
+        <div class="card rounded-xl overflow-hidden">
+          <button onclick="this.nextElementSibling.classList.toggle('hidden'); this.querySelector('.arrow').textContent = this.nextElementSibling.classList.contains('hidden') ? '▶' : '▼'" class="w-full flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-900">
+            <p class="text-xs font-semibold text-muted">📄 원본 페이지 텍스트 (${it.pageContent.length}자)</p>
+            <span class="arrow text-xs text-muted">▶</span>
+          </button>
+          <div class="hidden p-3 bg-gray-50 dark:bg-gray-900 border-t border-c max-h-80 overflow-y-auto">
+            <pre class="text-xs whitespace-pre-wrap break-words font-sans">${safe(it.pageContent)}</pre>
+          </div>
+        </div>` : ''}
+
+    </div>`;
+
+  document.getElementById('detailActions').innerHTML = isShareMode ? '' : `
+    <button onclick="window.open('lookbook.html?item=${it.id}','_blank')" class="px-4 py-2 rounded-lg text-sm font-semibold" style="background:linear-gradient(135deg,#ec4899,#8b5cf6);color:white;">🎀 팔로워용 룩북</button>
+    <button onclick="shareItemExternal('${it.id}')" class="px-4 py-2 rounded-lg text-sm font-semibold" style="background:#fee2e2;color:#dc2626;">📤 동료 공유</button>
+    <button onclick="closeDetail(); openModal('${it.id}')" class="card px-4 py-2 rounded-lg text-sm">수정</button>
+    <button onclick="closeDetail()" class="btn-primary px-4 py-2 rounded-lg text-sm">닫기</button>`;
+  document.getElementById('detailModal').classList.remove('hidden');
+}
+
+function closeDetail() { document.getElementById('detailModal').classList.add('hidden'); }
+
+// ── 외부 공유: 정리된 텍스트 생성 ──
+function shareItemExternal(itemId) {
+  const it = items.find(x => x.id === itemId);
+  if (!it) return;
+
+  const caption = generateCaption(it);
+  const checks = it.checks || {};
+  const checkLabels = { brief:'브리핑', product:'제품수령', shoot:'촬영', edit:'편집', approve:'컨펌', upload:'업로드', paid:'정산' };
+  const progress = Object.entries(checkLabels).map(([k,v]) => (checks[k] ? '✅' : '⬜') + ' ' + v).join('\n');
+
+  const lines = [];
+  lines.push(`━━━━━━━━━━━━━━━━━`);
+  lines.push(`📌 ${it.company} 협찬 정보`);
+  lines.push(`━━━━━━━━━━━━━━━━━`);
+  if (it.title) lines.push(`📝 ${it.title}`);
+  if (it.product) lines.push(`📦 제품: ${it.product}`);
+  lines.push(`📅 기간: ${it.start ? it.start + ' ~ ' : ''}${it.due}`);
+  lines.push(`💰 금액: ${it.price ? Number(it.price).toLocaleString('ko-KR') + '원' : '미정'}`);
+  if (it.platform) lines.push(`📱 플랫폼: ${platformLabel(it.platform)}`);
+  if (it.contact) lines.push(`👤 담당: ${it.contact}`);
+  lines.push('');
+  lines.push(`📊 진행 상황`);
+  lines.push(progress);
+  lines.push('');
+  lines.push(`✍️ 캡션`);
+  lines.push(`───────────────────`);
+  lines.push(caption);
+  lines.push(`───────────────────`);
+
+  const text = lines.join('\n');
+
+  // 공유 방법 선택 팝업
+  const shareDiv = document.createElement('div');
+  shareDiv.className = 'fixed inset-0 z-[99999] flex items-center justify-center modal-bg';
+  shareDiv.onclick = (e) => { if (e.target === shareDiv) shareDiv.remove(); };
+  shareDiv.innerHTML = `
+    <div class="card rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto p-5 space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-bold">📤 외부 공유</h3>
+        <button onclick="this.closest('.fixed').remove()" class="text-muted text-xl">✕</button>
+      </div>
+      <textarea class="w-full p-3 rounded-xl text-xs font-mono border border-c bg-white dark:bg-gray-900 resize-none" rows="12" readonly>${text.replace(/</g,'&lt;')}</textarea>
+      <div class="flex gap-2 flex-wrap">
+        <button onclick="navigator.clipboard.writeText(this.closest('.fixed').querySelector('textarea').value).then(()=>{this.textContent='✅ 복사됨!';setTimeout(()=>this.textContent='📋 텍스트 복사',1500)})" class="btn-primary px-4 py-2 rounded-lg text-sm font-semibold flex-1">📋 텍스트 복사</button>
+        <button onclick="shareViaKakao(this.closest('.fixed').querySelector('textarea').value)" class="px-4 py-2 rounded-lg text-sm font-semibold flex-1" style="background:#fee500;color:#3c1e1e;">💬 카카오톡</button>
+        <button onclick="shareViaEmail('${it.company}', this.closest('.fixed').querySelector('textarea').value)" class="card px-4 py-2 rounded-lg text-sm font-semibold flex-1">📧 이메일</button>
+      </div>
+      <p class="text-[10px] text-muted text-center">복사 후 카톡/메일에 붙여넣기 하거나, 공유 버튼 사용</p>
+    </div>`;
+  document.body.appendChild(shareDiv);
+}
+
+function shareViaKakao(text) {
+  // 카카오톡 공유 (모바일에서는 카카오링크, PC에서는 복사)
+  if (navigator.share) {
+    navigator.share({ text }).catch(() => {});
+  } else {
+    navigator.clipboard.writeText(text).then(() => alert('텍스트가 복사됐어요! 카카오톡에 붙여넣기 하세요'));
+  }
+}
+
+function shareViaEmail(company, text) {
+  const subject = encodeURIComponent(`[협찬] ${company} 진행 현황`);
+  const body = encodeURIComponent(text);
+  window.open(`mailto:?subject=${subject}&body=${body}`);
+}
+
+// ── 팔로워용 룩북 페이지 생성 ──
+function generateLookbook(itemId) {
+  const it = items.find(x => x.id === itemId);
+  if (!it) return;
+  const groups = parseLooksGrouped(it.productList);
+  migrateLookImages(it);
+
+  const lookCards = groups.map((look, li) => {
+    const prods = look.products || [];
+    if (prods.length === 0) return '';
+
+    const prodHtml = prods.map((p, pi) => {
+      const img = getProdImg(it, li, pi);
+      return `
+      <div style="display:flex;align-items:center;gap:14px;padding:14px 0;${pi > 0 ? 'border-top:1px solid #f3f4f6;' : ''}">
+        ${img ? `<img src="${img}" style="width:72px;height:72px;border-radius:12px;object-fit:cover;border:1px solid #e5e7eb;">` : `<div style="width:72px;height:72px;border-radius:12px;background:#f9fafb;display:flex;align-items:center;justify-content:center;font-size:24px;">👗</div>`}
+        <div style="flex:1;min-width:0;">
+          <p style="font-weight:700;font-size:15px;margin:0 0 4px;">${p.brand || '제품'}</p>
+          ${p.price ? `<p style="font-size:14px;color:#ec4899;font-weight:800;margin:0 0 4px;">₩${p.price}</p>` : ''}
+          ${p.productId ? `<p style="font-size:11px;color:#9ca3af;margin:0;">ID: ${p.productId}</p>` : ''}
+        </div>
+        ${p.url ? `<a href="${p.url}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;padding:8px 16px;background:#000;color:#fff;border-radius:20px;font-size:12px;font-weight:700;text-decoration:none;">구매하기 →</a>` : ''}
+      </div>`;
+    }).join('');
+
+    return `
+    <div style="background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,0.06);margin-bottom:20px;">
+      <div style="padding:16px 20px;background:linear-gradient(135deg,#fdf2f8,#faf5ff);border-bottom:1px solid #f3e8ff;display:flex;align-items:center;gap:10px;">
+        <span style="width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,#ec4899,#8b5cf6);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;">${li+1}</span>
+        <span style="font-size:15px;font-weight:800;">LOOK ${li+1}</span>
+        <span style="font-size:12px;color:#9ca3af;margin-left:auto;">${prods.length}개 아이템</span>
+      </div>
+      <div style="padding:12px 20px;">
+        ${prodHtml}
+      </div>
+    </div>`;
+  }).join('');
+
+  const couponHtml = it.couponCode ? `
+    <div style="background:linear-gradient(135deg,#fef3c7,#fff7ed);border:2px dashed #f59e0b;border-radius:16px;padding:16px 20px;margin-bottom:20px;text-align:center;">
+      <p style="font-size:12px;color:#92400e;margin:0 0 6px;">🎟️ 할인 쿠폰</p>
+      <p style="font-size:22px;font-weight:900;color:#b45309;margin:0;letter-spacing:2px;">${it.couponCode}</p>
+    </div>` : '';
+
+  const searchHtml = it.searchKeywords ? `
+    <div style="background:#eff6ff;border-radius:16px;padding:14px 20px;margin-bottom:20px;text-align:center;">
+      <p style="font-size:12px;color:#1e40af;margin:0 0 4px;">🔎 검색창에 입력하세요</p>
+      <p style="font-size:18px;font-weight:800;color:#1d4ed8;margin:0;">${it.searchKeywords}</p>
+    </div>` : '';
+
+  const html = `<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${it.company} - 남령's Pick 🎀</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:linear-gradient(180deg,#fdf2f8 0%,#f5f3ff 50%,#eff6ff 100%);min-height:100vh;padding:20px;}
+  a{color:inherit;}
+  .container{max-width:480px;margin:0 auto;}
+</style>
+</head><body>
+<div class="container">
+  <!-- 헤더 -->
+  <div style="text-align:center;padding:30px 0 24px;">
+    <p style="font-size:13px;color:#a78bfa;font-weight:600;letter-spacing:3px;margin-bottom:8px;">✨ NAM RYEONG'S PICK ✨</p>
+    <h1 style="font-size:24px;font-weight:900;background:linear-gradient(135deg,#ec4899,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">${it.company}</h1>
+    ${it.title ? `<p style="font-size:14px;color:#6b7280;margin-top:6px;">${it.title}</p>` : ''}
+  </div>
+
+  ${searchHtml}
+  ${couponHtml}
+
+  <!-- LOOK 카드들 -->
+  ${lookCards}
+
+  <!-- 푸터 -->
+  <div style="text-align:center;padding:24px 0;color:#9ca3af;font-size:11px;">
+    <p>🎀 @nam_ryeong 에서 더 많은 코디 보기</p>
+    <p style="margin-top:4px;">Made with 💕</p>
+  </div>
+</div>
+</body></html>`;
+
+  // Blob URL로 새 탭에서 열기
+  const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+}
+
+function toggleCheck(itemId, key, val) {
+  const it = items.find(x => x.id === itemId);
+  if (!it) return;
+  if (!it.checks) it.checks = {};
+  it.checks[key] = val;
+  save();
+  renderAll();
+}
+
+// ===== 내보내기/가져오기 =====
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(items, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `남령_협찬데이터_${dateStr(new Date())}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toggleMenu();
+}
+
+function importJSON() {
+  document.getElementById('fileInput').click();
+  toggleMenu();
+}
+
+document.getElementById('fileInput').addEventListener('change', (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!Array.isArray(data)) throw new Error('잘못된 형식');
+      if (confirm(`${data.length}건을 가져올까요? (기존 데이터 덮어쓰기)`)) {
+        items = data;
+        save();
+        renderAll();
+        alert('가져오기 완료!');
+      }
+    } catch(err) { alert('파일 형식이 올바르지 않아요: ' + err.message); }
+  };
+  r.readAsText(f);
+});
+
+function exportCSV() {
+  const headers = ['업체','담당자','연락처','제품','제목','플랫폼','시작일','마감일','상태','금액','메모'];
+  const rows = items.map(it => [
+    it.company, it.contact, it.contactInfo, it.product, it.title,
+    platformLabel(it.platform), it.start, it.due, it.status, it.price, it.memo
+  ].map(v => `"${(v||'').toString().replace(/"/g,'""')}"`).join(','));
+  const csv = '﻿' + headers.join(',') + '\n' + rows.join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `남령_협찬리스트_${dateStr(new Date())}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toggleMenu();
+}
+
+function copyShareLink() {
+  // 공유 링크에는 무거운 pageContent 제외 (URL 길이 단축)
+  const slimItems = items.map(({pageContent, ...rest}) => rest);
+  const encoded = btoa(encodeURIComponent(JSON.stringify(slimItems)));
+  const url = `${window.location.origin}${window.location.pathname}?share=${encoded}`;
+  if (url.length > 8000) {
+    alert('데이터가 너무 많아서 링크가 길어요. JSON 파일로 공유해주세요!');
+    toggleMenu();
+    return;
+  }
+  navigator.clipboard.writeText(url).then(() => {
+    alert('공유 링크가 복사됐어요! 업체에게 보내면 읽기 전용으로 볼 수 있어요.');
+  });
+  toggleMenu();
+}
+
+function exitShareMode() {
+  window.location.href = window.location.pathname;
+}
+
+function clearAll() {
+  if (!confirm('정말 모든 데이터를 삭제할까요? 되돌릴 수 없어요!')) return;
+  if (!confirm('진짜로요?? 한번 더 확인할게요.')) return;
+  items = [];
+  save();
+  renderAll();
+  toggleMenu();
+}
+
+// ===== 다크모드 / 메뉴 =====
+function toggleDark() {
+  document.documentElement.classList.toggle('dark');
+  const isDark = document.documentElement.classList.contains('dark');
+  localStorage.setItem('dark', isDark ? '1' : '0');
+  document.getElementById('darkBtn').textContent = isDark ? '☀️' : '🌙';
+}
+
+function toggleMenu() {
+  document.getElementById('menu').classList.toggle('hidden');
+}
+
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('menu');
+  if (!e.target.closest('.relative')) menu.classList.add('hidden');
+});
+
+// ESC 단축키
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { closeModal(); closeDetail(); closeParseModal(); closeBookmarklet(); }
+  if (e.key === 'n' && e.ctrlKey) { e.preventDefault(); openModal(); }
+});
+
+init();
+
+// ── 제품 미리보기 (작은 팝업 창) ──
+let _prodPopup = null;
+function openProductPreview(url) {
+  const w = 480, h = 750;
+  const left = screen.width - w - 30;
+  const top = 80;
+  // 기존 팝업이 열려있으면 재사용
+  if (_prodPopup && !_prodPopup.closed) {
+    _prodPopup.location.href = url;
+    _prodPopup.focus();
+  } else {
+    _prodPopup = window.open(url, 'prodPreview', `width=${w},height=${h},left=${left},top=${top},scrollbars=yes,resizable=yes`);
+  }
+}
+function closeProductPreview() {
+  if (_prodPopup && !_prodPopup.closed) _prodPopup.close();
+  _prodPopup = null;
+}
+</script>
+
+</body>
+</html>

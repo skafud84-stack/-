@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/fonts-archive/Paperlogy/subsets/Paperlogy-dynamic-subset.css" type="text/css"/>
+<title>남령's Pick</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #fff; color: #111; min-height: 100vh; }
+
+  .header { padding: 48px 20px 32px; text-align: center; border-bottom: 1px solid #eee; }
+  .header .sub { font-family: 'Paperlogy', sans-serif; font-weight: 900; font-size: 22px; color: #111; letter-spacing: 6px; text-transform: uppercase; margin-bottom: 12px; }
+  .header h1 { font-family: 'Paperlogy', sans-serif; font-weight: 900; font-size: 30px; color: #111; }
+  .header .desc { font-size: 13px; color: #888; margin-top: 6px; }
+
+  .nav { padding: 14px 20px; border-bottom: 1px solid #eee; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
+  .nav-btn { display: inline-block; padding: 7px 18px; border-radius: 6px; font-size: 12px; font-weight: 700; border: 1.5px solid #ddd; background: #fff; color: #555; cursor: pointer; margin-right: 6px; transition: all 0.15s; }
+  .nav-btn:hover { border-color: #111; color: #111; }
+  .nav-btn.active { background: #111; color: #fff; border-color: #111; }
+
+  .container { max-width: 500px; margin: 0 auto; padding: 24px 16px; }
+
+  /* 배너 박스 (쿠폰, 검색) */
+  .banner { border: 1.5px solid #111; border-radius: 10px; padding: 16px; text-align: center; margin-bottom: 14px; position: relative; cursor: pointer; transition: background 0.15s; }
+  .banner:hover { background: #f9f9f9; }
+  .banner .label { font-size: 10px; color: #888; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+  .banner .value { font-size: 20px; font-weight: 900; color: #111; letter-spacing: 1px; }
+  .banner .copy-hint { font-size: 10px; color: #bbb; margin-top: 6px; transition: color 0.15s; }
+  .banner:hover .copy-hint { color: #111; }
+  .banner.copied { background: #111; }
+  .banner.copied .label, .banner.copied .value, .banner.copied .copy-hint { color: #fff; }
+
+  .search-banner { border-color: #ddd; }
+
+  /* 영상 */
+  .video-section { margin-bottom: 20px; border-radius: 12px; overflow: hidden; border: 1px solid #eee; }
+  .video-section iframe { width: 100%; aspect-ratio: 16/9; border: none; display: block; }
+  .video-link { display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: #fafafa; border: 1px solid #eee; border-radius: 10px; margin-bottom: 14px; text-decoration: none; color: #111; transition: background 0.15s; }
+  .video-link:hover { background: #f0f0f0; }
+  .video-icon { font-size: 20px; flex-shrink: 0; }
+  .video-text { font-size: 13px; font-weight: 600; }
+  .video-arrow { margin-left: auto; color: #999; font-size: 14px; }
+
+  /* LOOK 카드 */
+  .look-card { background: #fff; border: 1px solid #eee; border-radius: 12px; overflow: hidden; margin-bottom: 14px; }
+  .look-header { padding: 12px 16px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 10px; }
+  .look-num { width: 26px; height: 26px; border-radius: 6px; background: #111; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900; flex-shrink: 0; }
+  .look-title { font-size: 13px; font-weight: 800; }
+  .look-count { font-size: 11px; color: #bbb; margin-left: auto; }
+  .look-body { padding: 6px 16px; }
+
+  .prod-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
+  .prod-row + .prod-row { border-top: 1px solid #f5f5f5; }
+  .prod-img { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; border: 1px solid #eee; flex-shrink: 0; }
+  .prod-placeholder { width: 64px; height: 64px; border-radius: 10px; background: #f5f5f5; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .prod-info { flex: 1; min-width: 0; }
+  .prod-brand { font-weight: 700; font-size: 13px; margin-bottom: 2px; }
+  .prod-id { font-size: 10px; color: #ccc; }
+  .prod-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .prod-price { font-size: 13px; color: #111; font-weight: 800; white-space: nowrap; }
+  .buy-btn { padding: 7px 14px; background: #111; color: #fff; border-radius: 6px; font-size: 11px; font-weight: 700; text-decoration: none; flex-shrink: 0; transition: opacity 0.15s; }
+  .buy-btn:hover { opacity: 0.7; }
+
+  /* 브랜드 타이틀 (컨텐츠 영역) */
+  .brand-title { text-align: center; margin-bottom: 20px; }
+  .brand-title h2 { font-family: 'Paperlogy', sans-serif; font-weight: 900; font-size: 24px; color: #111; margin-bottom: 4px; }
+  .brand-title .tagline { font-size: 12px; color: #999; }
+
+  /* 편 탭 */
+  .part-tabs { display: flex; justify-content: center; gap: 6px; margin-bottom: 18px; }
+  .part-btn { padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 800; border: 1.5px solid #ddd; background: #fff; color: #555; cursor: pointer; transition: all 0.15s; font-family: 'Paperlogy', sans-serif; }
+  .part-btn:hover { border-color: #111; color: #111; }
+  .part-btn.active { background: #111; color: #fff; border-color: #111; }
+
+  .empty { text-align: center; padding: 80px 20px; color: #ccc; }
+  .empty .icon { font-size: 40px; margin-bottom: 12px; }
+
+  .footer { text-align: center; padding: 32px 20px; color: #ccc; font-size: 11px; border-top: 1px solid #eee; margin-top: 20px; }
+  .footer a { color: #111; text-decoration: none; font-weight: 700; }
+
+  /* SNS 아이콘 */
+  .sns-row { display: flex; justify-content: center; gap: 14px; margin-top: 16px; }
+  .sns-btn { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; text-decoration: none; border: 1.5px solid #ddd; background: #fff; transition: all 0.15s; }
+  .sns-btn:hover { border-color: #111; transform: translateY(-2px); }
+  .sns-btn svg { width: 18px; height: 18px; fill: #333; }
+
+  @media (prefers-color-scheme: dark) {
+    body { background: #0a0a0a; color: #eee; }
+    .header { border-color: #222; }
+    .header .sub { color: #fff; }
+    .header h1 { color: #fff; }
+    .nav { border-color: #222; }
+    .nav-btn { background: #111; color: #aaa; border-color: #333; }
+    .nav-btn:hover { border-color: #fff; color: #fff; }
+    .nav-btn.active { background: #fff; color: #000; border-color: #fff; }
+    .banner { border-color: #fff; }
+    .banner .value { color: #fff; }
+    .banner:hover { background: #1a1a1a; }
+    .banner.copied { background: #fff; }
+    .banner.copied .label, .banner.copied .value, .banner.copied .copy-hint { color: #000; }
+    .look-card { background: #111; border-color: #222; }
+    .look-header { border-color: #222; }
+    .look-num { background: #fff; color: #000; }
+    .prod-row + .prod-row { border-color: #222; }
+    .prod-placeholder { background: #1a1a1a; }
+    .prod-price { color: #eee; }
+    .buy-btn { background: #fff; color: #000; }
+    .video-link { background: #111; border-color: #222; color: #eee; }
+    .video-link:hover { background: #1a1a1a; }
+    .footer { border-color: #222; }
+    .footer a { color: #fff; }
+    .search-banner { border-color: #333; }
+    .sns-btn { background: #1a1a1a; border-color: #333; }
+    .sns-btn:hover { border-color: #fff; }
+    .sns-btn svg { fill: #ccc; }
+    .brand-title h2 { color: #fff; }
+    .part-btn { background: #1a1a1a; color: #aaa; border-color: #333; }
+    .part-btn:hover { border-color: #fff; color: #fff; }
+    .part-btn.active { background: #fff; color: #000; border-color: #fff; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <p class="sub">nam ryeong's pick</p>
+  <div class="sns-row">
+    <a href="https://www.instagram.com/nam_ryeong" target="_blank" class="sns-btn" title="Instagram">
+      <svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+    </a>
+    <a href="https://www.youtube.com/@nam_ryeong" target="_blank" class="sns-btn" title="YouTube">
+      <svg viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+    </a>
+    <a href="https://www.tiktok.com/@nam_ryeong" target="_blank" class="sns-btn" title="TikTok">
+      <svg viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
+    </a>
+  </div>
+</div>
+
+<div class="nav" id="navTabs"></div>
+
+<div class="container" id="lookbookContent">
+  <div class="empty">
+    <div class="icon">✦</div>
+    <span>대시보드에서 협찬을 추가하면 여기에 자동으로 표시돼요</span>
+  </div>
+</div>
+
+<div class="footer">
+  <p><a href="#">@nam_ryeong</a></p>
+</div>
+
+<script>
+const STORAGE_KEY = 'sponsorship_dashboard_v1';
+
+function loadItems() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch(e) { return []; }
+}
+
+function parseLooksGrouped(productList) {
+  if (!productList || !productList.trim()) return [];
+  const sections = productList.split(/(?=🎀\s*LOOK\s*\d+)/i).filter(s => /🎀/.test(s));
+  if (sections.length === 0) return [];
+  return sections.map(section => {
+    const body = section.replace(/^🎀\s*LOOK\s*\d+\s*/i, '').trim();
+    if (!body) return { products: [] };
+    const products = []; const lines = body.split('\n'); let cur = null;
+    for (const raw of lines) {
+      const line = raw.trim(); if (!line) continue;
+      if (/^🔗\s*https?:/.test(line)) { if (cur) { const m = line.match(/🔗\s*(https?:\/\/[^\s]+)/); if (m) cur.url = m[1]; } continue; }
+      if (/🆔/.test(line) || /\|/.test(line) || /[A-Za-z가-힣]{2,}/.test(line)) {
+        if (cur) products.push(cur);
+        const brandM = line.match(/^([^|🆔💰]+)/);
+        const idM = line.match(/🆔\s*(\d+)/);
+        const priceM = line.match(/💰\s*([\d,]+)\s*원/);
+        cur = { brand: brandM?brandM[1].trim():'', productId: idM?idM[1]:'', price: priceM?priceM[1]:'', url: '' };
+      }
+    }
+    if (cur) products.push(cur);
+    return { products };
+  });
+}
+
+function getProdImg(it, li, pi) {
+  if (it.prodImages) return it.prodImages[li + '_' + pi] || null;
+  if (it.lookImages) { const v = it.lookImages[li]; const arr = typeof v === 'string' ? [v] : (Array.isArray(v) ? v : []); return arr[pi] || null; }
+  return null;
+}
+
+// 유튜브 ID 추출
+function getYouTubeId(url) {
+  if (!url) return null;
+  const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+
+function copyToClipboard(text, el) {
+  navigator.clipboard.writeText(text).then(() => {
+    el.classList.add('copied');
+    const hint = el.querySelector('.copy-hint');
+    if (hint) hint.textContent = '✓ 복사됨!';
+    setTimeout(() => {
+      el.classList.remove('copied');
+      if (hint) hint.textContent = '탭하면 복사';
+    }, 1500);
+  });
+}
+
+let currentItemId = null;
+let currentPart = 0; // 0 = 전체, 1 = 1편, 2 = 2편...
+
+function getPartRanges(it) {
+  const groups = parseLooksGrouped(it.productList);
+  const total = groups.length;
+  if (!it.partSplits || it.partSplits.length === 0 || total === 0) return [];
+  const splits = [...new Set(it.partSplits)].sort((a, b) => a - b).filter(s => s > 0 && s < total);
+  if (splits.length === 0) return [];
+  const ranges = [];
+  let start = 0;
+  splits.forEach((s, i) => {
+    ranges.push({ part: i + 1, from: start, to: s - 1 });
+    start = s;
+  });
+  ranges.push({ part: splits.length + 1, from: start, to: total - 1 });
+  return ranges;
+}
+
+function getUrlItemId() {
+  const p = new URLSearchParams(window.location.search);
+  return p.get('item') || '';
+}
+
+function renderNav() {
+  const items = loadItems().filter(it => it.status !== '취소' && it.productList);
+  const nav = document.getElementById('navTabs');
+  if (items.length === 0) {
+    nav.innerHTML = '<span style="font-size:12px;color:#999;padding:4px;">데이터 없음</span>';
+    return;
+  }
+  nav.innerHTML = items.map(it =>
+    `<button class="nav-btn ${currentItemId === it.id ? 'active' : ''}" onclick="showItem('${it.id}')">${it.company}</button>`
+  ).join('');
+  // URL에 ?item=ID가 있으면 그 아이템 먼저 표시
+  const urlItemId = getUrlItemId();
+  if (urlItemId && items.find(x => x.id === urlItemId)) {
+    showItem(urlItemId);
+  } else if (!currentItemId || !items.find(x => x.id === currentItemId)) {
+    showItem(items[0].id);
+  }
+}
+
+function showItem(itemId, partNum) {
+  currentItemId = itemId;
+  const items = loadItems();
+  const it = items.find(x => x.id === itemId);
+  if (!it) return;
+
+  const ranges = getPartRanges(it);
+  const hasParts = ranges.length > 0;
+
+  // partNum 결정
+  if (partNum !== undefined) {
+    currentPart = partNum;
+  } else if (hasParts && currentPart === 0) {
+    currentPart = 1; // 편이 있으면 기본 1편
+  } else if (!hasParts) {
+    currentPart = 0;
+  }
+
+  document.querySelectorAll('.nav-btn').forEach((btn, i) => {
+    const allItems = items.filter(x => x.status !== '취소' && x.productList);
+    btn.classList.toggle('active', allItems[i]?.id === itemId);
+  });
+
+  const groups = parseLooksGrouped(it.productList);
+  const container = document.getElementById('lookbookContent');
+  let html = '';
+
+  // 브랜드 타이틀 (헤더에서 이동)
+  html += `<div class="brand-title">
+    <h2>${it.company}</h2>
+    ${it.title ? `<p class="tagline">${it.title}</p>` : ''}
+  </div>`;
+
+  // 편 탭 표시
+  if (hasParts) {
+    html += `<div class="part-tabs">`;
+    html += ranges.map(r =>
+      `<button class="part-btn ${currentPart === r.part ? 'active' : ''}" onclick="showItem('${itemId}',${r.part})">${r.part}편</button>`
+    ).join('');
+    html += `</div>`;
+  }
+
+  // 현재 편에 해당하는 LOOK 범위
+  let fromIdx = 0, toIdx = groups.length - 1;
+  if (hasParts && currentPart > 0) {
+    const range = ranges.find(r => r.part === currentPart);
+    if (range) { fromIdx = range.from; toIdx = range.to; }
+  }
+
+  // 검색 키워드
+  if (it.searchKeywords) {
+    html += `<div class="banner search-banner" onclick="copyToClipboard('${it.searchKeywords.replace(/'/g,"\\'")}', this)">
+      <p class="label">검색창 코드</p>
+      <p class="value">${it.searchKeywords}</p>
+      <p class="copy-hint">탭하면 복사</p>
+    </div>`;
+  }
+
+  // 쿠폰
+  if (it.couponCode) {
+    html += `<div class="banner" onclick="copyToClipboard('${it.couponCode.replace(/'/g,"\\'")}', this)">
+      <p class="label">할인 쿠폰</p>
+      <p class="value">${it.couponCode}</p>
+      <p class="copy-hint">탭하면 복사</p>
+    </div>`;
+  }
+
+  // 공개 영상 링크 (편별 videoLinks 또는 단일 videoLink)
+  const vLinks = it.videoLinks || {};
+  const videoUrl = hasParts && currentPart > 0
+    ? (vLinks[String(currentPart)] || '')
+    : (vLinks['0'] || it.videoLink || '');
+
+  if (videoUrl) {
+    const ytId = getYouTubeId(videoUrl);
+    if (ytId) {
+      html += `<div class="video-section"><iframe src="https://www.youtube.com/embed/${ytId}" allowfullscreen></iframe></div>`;
+    } else {
+      const isInsta = /instagram\.com/.test(videoUrl);
+      const isTiktok = /tiktok\.com/.test(videoUrl);
+      const icon = isInsta ? '📸' : isTiktok ? '🎵' : '🎬';
+      const label = isInsta ? 'Instagram에서 보기' : isTiktok ? 'TikTok에서 보기' : '영상 보러가기';
+      html += `<a href="${videoUrl}" target="_blank" class="video-link">
+        <span class="video-icon">${icon}</span>
+        <span class="video-text">${label}</span>
+        <span class="video-arrow">→</span>
+      </a>`;
+    }
+  }
+
+  // LOOK 카드들 (현재 편 범위만)
+  let lookDisplayNum = 0;
+  for (let li = fromIdx; li <= toIdx; li++) {
+    lookDisplayNum++;
+    const look = groups[li];
+    if (!look) continue;
+    const prods = look.products || [];
+    if (prods.length === 0) continue;
+    const prodHtml = prods.map((p, pi) => {
+      const img = getProdImg(it, li, pi);
+      return `
+      <div class="prod-row">
+        ${img ? `<img src="${img}" class="prod-img" alt="">` : `<div class="prod-placeholder">✦</div>`}
+        <div class="prod-info">
+          <p class="prod-brand">${p.brand || '제품'}</p>
+          ${p.productId ? `<p class="prod-id">${p.productId}</p>` : ''}
+        </div>
+        <div class="prod-right">
+          ${p.price ? `<span class="prod-price">₩${p.price}</span>` : ''}
+          ${p.url ? `<a href="${p.url}" target="_blank" class="buy-btn">구매 →</a>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+    html += `
+    <div class="look-card">
+      <div class="look-header">
+        <span class="look-num">${lookDisplayNum}</span>
+        <span class="look-title">LOOK ${lookDisplayNum}</span>
+        <span class="look-count">${prods.length}</span>
+      </div>
+      <div class="look-body">${prodHtml}</div>
+    </div>`;
+  }
+
+  if (html.indexOf('look-card') < 0 && html.indexOf('banner') < 0) {
+    html += '<div class="empty"><div class="icon">✦</div><span>데이터 없음</span></div>';
+  }
+  container.innerHTML = html;
+}
+
+renderNav();
+window.addEventListener('storage', (e) => { if (e.key === STORAGE_KEY) { renderNav(); if (currentItemId) showItem(currentItemId); } });
+setInterval(() => { renderNav(); if (currentItemId) showItem(currentItemId); }, 3000);
+</script>
+</body>
+</html>
