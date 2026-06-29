@@ -2913,6 +2913,49 @@ function duplicateProduct(itemId, lookIdx, prodIdx) {
   save(); refreshLookEditor(itemId);
 }
 
+// ── 단일 제품 텍스트 파싱 (이름/🆔/🔗/💰 자유 형식) ──
+function parseSingleProduct(text) {
+  if (!text || !text.trim()) return null;
+  const t = text.trim();
+  // 이름/브랜드: "이름:" "브랜드:" "제품:" 뒤
+  let brand = '';
+  const nameM = t.match(/(?:이름|브랜드|제품명?)\s*[:：]\s*(.+)/);
+  if (nameM) brand = nameM[1].trim();
+  // 🆔 또는 ID/아이디 뒤 숫자
+  const idM = t.match(/🆔\s*[:：]?\s*(\d+)/) || t.match(/(?:^|\n)\s*(?:id|아이디)\s*[:：]?\s*(\d+)/i);
+  // 🔗 또는 일반 URL
+  const urlM = t.match(/(https?:\/\/[^\s]+)/);
+  // 💰 또는 가격 뒤 숫자
+  const priceM = t.match(/💰\s*([\d,]+)/) || t.match(/(?:가격|price)\s*[:：]?\s*([\d,]+)/i);
+  // 이름 라벨 없으면 → 🆔🔗💰·URL 없는 첫 줄을 브랜드로
+  if (!brand) {
+    const lines = t.split('\n').map(l => l.trim()).filter(Boolean);
+    for (const l of lines) {
+      if (/🆔|🔗|💰|https?:/i.test(l)) continue;
+      const cleaned = l.replace(/^(?:이름|브랜드|제품명?)\s*[:：]\s*/, '').trim();
+      if (cleaned) { brand = cleaned; break; }
+    }
+  }
+  let price = '';
+  if (priceM) { const n = priceM[1].replace(/[^\d]/g, ''); if (n) price = Number(n).toLocaleString('ko-KR'); }
+  if (!brand && !idM && !urlM) return null;
+  return { brand: brand || '제품', productId: idM ? idM[1] : '', price, url: urlM ? urlM[1] : '' };
+}
+
+// ── LOOK에 제품 추가 (붙여넣기/입력) ──
+function addProductToLook(itemId, lookIdx, text) {
+  const it = items.find(x => x.id === itemId);
+  if (!it) return;
+  const prod = parseSingleProduct(text);
+  if (!prod) { alert('제품 정보를 못 읽었어요. 이름 / 🆔 / 🔗 형식으로 붙여넣어 주세요.'); return; }
+  const groups = parseLooksGrouped(it.productList);
+  if (!groups[lookIdx]) return;
+  groups[lookIdx].products.push(prod); // 맨 뒤에 추가 → 기존 이미지 키 유지
+  it.productList = rebuildProductList(groups);
+  delete it.customCaption; delete it.partCaptions;
+  save(); refreshLookEditor(itemId);
+}
+
 // ── 제품(옷) 삭제 ──
 function deleteProduct(itemId, lookIdx, prodIdx) {
   const it = items.find(x => x.id === itemId);
@@ -3447,6 +3490,15 @@ function buildLookCards(it) {
       <!-- 제품 목록 (각 제품에 이미지 포함) -->
       <div class="p-2 space-y-0.5">
         ${prodRows || `<p class="text-[10px] text-muted text-center py-2 opacity-50">제품을 여기로 드래그하거나<br>LOOK# 선택으로 배치</p>`}
+        <!-- 제품 추가 (붙여넣기) -->
+        <div class="flex gap-1 pt-1.5 mt-1 border-t border-dashed border-c">
+          <textarea id="addProd_${it.id}_${li}" rows="1" placeholder="➕ 제품 붙여넣기 (이름/🆔/🔗)"
+            class="flex-1 text-[10px] px-2 py-1 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 bg-transparent focus:border-pink-400 outline-none resize-none leading-tight"
+            onclick="event.stopPropagation()" draggable="false"
+            onpaste="event.stopPropagation();const _c=(event.clipboardData||window.clipboardData).getData('text');event.preventDefault();addProductToLook('${it.id}',${li},_c)"></textarea>
+          <button onclick="event.stopPropagation();addProductToLook('${it.id}',${li},document.getElementById('addProd_${it.id}_${li}').value)"
+            class="text-[10px] px-2.5 rounded-lg bg-pink-500 text-white font-bold hover:bg-pink-600 flex-shrink-0" draggable="false" title="제품 추가">추가</button>
+        </div>
       </div>
     </div>`;
   }).join('');
