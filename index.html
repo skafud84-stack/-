@@ -3107,24 +3107,65 @@ function migrateLookImages(it) {
   });
   delete it.lookImages;
 }
+// 대표 이미지 1장 (배열이면 첫 장)
 function getProdImg(it, lookIdx, prodIdx) {
   migrateLookImages(it);
   if (!it.prodImages) return null;
-  return it.prodImages[lookIdx + '_' + prodIdx] || null;
+  const v = it.prodImages[lookIdx + '_' + prodIdx];
+  if (!v) return null;
+  return Array.isArray(v) ? (v[0] || null) : v;
 }
-function saveProdImage(itemId, lookIdx, prodIdx, dataUrl) {
+// 전체 이미지 배열 (1장이어도 배열로)
+function getProdImgs(it, lookIdx, prodIdx) {
+  migrateLookImages(it);
+  if (!it.prodImages) return [];
+  const v = it.prodImages[lookIdx + '_' + prodIdx];
+  if (!v) return [];
+  return Array.isArray(v) ? v.filter(Boolean) : [v];
+}
+function saveProdImage(itemId, lookIdx, prodIdx, dataUrl, append) {
   const it = items.find(x => x.id === itemId);
   if (!it) return;
   migrateLookImages(it);
   if (!it.prodImages) it.prodImages = {};
-  it.prodImages[lookIdx + '_' + prodIdx] = dataUrl;
+  const key = lookIdx + '_' + prodIdx;
+  if (append) {
+    const cur = it.prodImages[key];
+    const arr = cur ? (Array.isArray(cur) ? cur.slice() : [cur]) : [];
+    arr.push(dataUrl);
+    it.prodImages[key] = arr;
+  } else {
+    it.prodImages[key] = dataUrl;
+  }
   save(); refreshLookEditor(itemId);
 }
+// 제품 이미지 전체 삭제
 function removeProdImage(itemId, lookIdx, prodIdx) {
   const it = items.find(x => x.id === itemId);
   if (!it || !it.prodImages) return;
   delete it.prodImages[lookIdx + '_' + prodIdx];
   save(); refreshLookEditor(itemId);
+}
+// 특정 1장만 삭제
+function removeProdImageAt(itemId, lookIdx, prodIdx, imgIdx) {
+  const it = items.find(x => x.id === itemId);
+  if (!it || !it.prodImages) return;
+  const key = lookIdx + '_' + prodIdx;
+  const v = it.prodImages[key];
+  if (Array.isArray(v)) {
+    v.splice(imgIdx, 1);
+    if (v.length === 0) delete it.prodImages[key];
+    else if (v.length === 1) it.prodImages[key] = v[0];
+  } else {
+    delete it.prodImages[key];
+  }
+  save(); refreshLookEditor(itemId);
+}
+// 사진 추가(＋) 트리거: Ctrl+V도 추가되게 타겟 지정 후 파일창 열기
+function addMoreProdImage(itemId, lookIdx, prodIdx) {
+  setPasteTarget(itemId, lookIdx, prodIdx);
+  const inp = document.getElementById('addImgF_' + itemId + '_' + lookIdx + '_' + prodIdx);
+  if (inp) inp.click();
 }
 // 이미지 키 매핑 도우미: 변경 전 {brand+id → imgData} 맵 생성
 function rebuildProdImgMap(it, groups) {
@@ -3164,15 +3205,20 @@ function handleProdImageDrop(e, itemId, lookIdx, prodIdx) {
   e.preventDefault(); e.stopPropagation();
   const files = e.dataTransfer.files;
   if (!files?.length) return;
-  const f = files[0];
-  if (f.type.startsWith('image/')) compressProdImage(f, itemId, lookIdx, prodIdx);
+  // 여러 장 드롭 → 순서대로 추가
+  const imgs = [...files].filter(f => f.type.startsWith('image/'));
+  imgs.forEach((f, i) => compressProdImage(f, itemId, lookIdx, prodIdx, i > 0 || getProdImgs(items.find(x=>x.id===itemId)||{}, lookIdx, prodIdx).length > 0));
 }
 function handleProdImageFile(e, itemId, lookIdx, prodIdx) {
   const files = e.target.files;
   if (!files?.length) return;
-  compressProdImage(files[0], itemId, lookIdx, prodIdx);
+  const it = items.find(x => x.id === itemId);
+  const already = it ? getProdImgs(it, lookIdx, prodIdx).length : 0;
+  [...files].forEach((f, i) => compressProdImage(f, itemId, lookIdx, prodIdx, already > 0 || i > 0));
+  e.target.value = ''; // 같은 파일 재선택 가능하게
 }
-function compressProdImage(file, itemId, lookIdx, prodIdx) {
+// append=true면 기존 사진에 추가, 아니면 교체
+function compressProdImage(file, itemId, lookIdx, prodIdx, append) {
   const reader = new FileReader();
   reader.onload = function(ev) {
     const img = new Image();
@@ -3181,7 +3227,7 @@ function compressProdImage(file, itemId, lookIdx, prodIdx) {
       const ctx = c.getContext('2d');
       const min = Math.min(img.width, img.height);
       ctx.drawImage(img, (img.width-min)/2, (img.height-min)/2, min, min, 0, 0, 120, 120);
-      saveProdImage(itemId, lookIdx, prodIdx, c.toDataURL('image/jpeg', 0.7));
+      saveProdImage(itemId, lookIdx, prodIdx, c.toDataURL('image/jpeg', 0.7), append);
     };
     img.src = ev.target.result;
   };
@@ -3225,7 +3271,9 @@ document.addEventListener('paste', function(e) {
   e.preventDefault();
 
   if (_pasteTarget) {
-    compressProdImage(imgFile, _pasteTarget.itemId, _pasteTarget.lookIdx, _pasteTarget.prodIdx);
+    const pit = items.find(x => x.id === _pasteTarget.itemId);
+    const hasImg = pit ? getProdImgs(pit, _pasteTarget.lookIdx, _pasteTarget.prodIdx).length > 0 : false;
+    compressProdImage(imgFile, _pasteTarget.itemId, _pasteTarget.lookIdx, _pasteTarget.prodIdx, hasImg);
     _pasteTarget = null;
     return;
   }
@@ -3429,20 +3477,23 @@ function buildLookCards(it) {
 
     // 제품 행들 (각 제품에 이미지 포함)
     const prodRows = prods.map((p, pi) => {
-      const img = getProdImg(it, li, pi);
-      const imgCell = img
+      const imgs = getProdImgs(it, li, pi);
+      const imgCell = imgs.length
         ? `<div class="relative group/img flex-shrink-0">
-            <img src="${img}" alt="" class="w-11 h-11 rounded-lg object-cover border border-c">
-            <button onclick="event.stopPropagation();removeProdImage('${it.id}',${li},${pi})" class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[8px] flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity">✕</button>
+            <img src="${imgs[0]}" alt="" class="w-11 h-11 rounded-lg object-cover border border-c">
+            ${imgs.length > 1 ? `<span class="absolute bottom-0 left-0 bg-black/70 text-white text-[8px] px-1 rounded-tr-md rounded-bl-lg font-bold leading-tight">${imgs.length}장</span>` : ''}
+            <button onclick="event.stopPropagation();removeProdImage('${it.id}',${li},${pi})" class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[8px] flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity" title="사진 전체 삭제">✕</button>
+            <button onclick="event.stopPropagation();addMoreProdImage('${it.id}',${li},${pi})" class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-pink-500 text-white text-[10px] leading-none flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity" title="사진 추가 (상의/하의컷)">＋</button>
+            <input type="file" id="addImgF_${it.id}_${li}_${pi}" accept="image/*" multiple class="hidden" onchange="handleProdImageFile(event,'${it.id}',${li},${pi})" />
           </div>`
         : `<div id="prodImgSlot_${it.id}_${li}_${pi}" class="w-11 h-11 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center cursor-pointer hover:border-pink-400 transition-colors flex-shrink-0"
             onclick="event.stopPropagation();setPasteTarget('${it.id}',${li},${pi});document.getElementById('prodImgF_${it.id}_${li}_${pi}').click()"
             ondragover="event.preventDefault();event.stopPropagation();this.classList.add('border-pink-400','bg-pink-50')"
             ondragleave="this.classList.remove('border-pink-400','bg-pink-50')"
             ondrop="event.stopPropagation();this.classList.remove('border-pink-400','bg-pink-50');handleProdImageDrop(event,'${it.id}',${li},${pi})"
-            title="클릭 후 Ctrl+V로 붙여넣기 가능">
+            title="클릭/붙여넣기/드래그로 사진 추가 (여러 장 OK)">
             <span class="text-[9px] opacity-30">📷</span>
-            <input type="file" id="prodImgF_${it.id}_${li}_${pi}" accept="image/*" class="hidden" onchange="handleProdImageFile(event,'${it.id}',${li},${pi})" />
+            <input type="file" id="prodImgF_${it.id}_${li}_${pi}" accept="image/*" multiple class="hidden" onchange="handleProdImageFile(event,'${it.id}',${li},${pi})" />
           </div>`;
       return `
       <div class="prod-row flex items-center gap-1.5 py-1 px-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 group/prod cursor-grab"

@@ -53,6 +53,10 @@
   .prod-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
   .prod-row + .prod-row { border-top: 1px solid #f5f5f5; }
   .prod-img { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; border: 1px solid #eee; flex-shrink: 0; }
+  /* 여러 장 자동 전환 슬라이드 (상의컷 → 하의컷 …) */
+  .prod-slide { position: relative; width: 64px; height: 64px; border-radius: 10px; overflow: hidden; border: 1px solid #eee; flex-shrink: 0; }
+  .prod-slide img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.5s ease; }
+  .prod-slide img.on { opacity: 1; }
   .prod-placeholder { width: 64px; height: 64px; border-radius: 10px; background: #f5f5f5; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
   .prod-info { flex: 1; min-width: 0; }
   .prod-brand { font-weight: 700; font-size: 13px; margin-bottom: 2px; }
@@ -104,6 +108,7 @@
     .look-num { background: #fff; color: #000; }
     .prod-row + .prod-row { border-color: #222; }
     .prod-placeholder { background: #1a1a1a; }
+    .prod-slide { border-color: #222; }
     .prod-price { color: #eee; }
     .buy-btn { background: #fff; color: #000; }
     .video-link { background: #111; border-color: #222; color: #eee; }
@@ -184,9 +189,18 @@ function parseLooksGrouped(productList) {
 }
 
 function getProdImg(it, li, pi) {
-  if (it.prodImages) return it.prodImages[li + '_' + pi] || null;
-  if (it.lookImages) { const v = it.lookImages[li]; const arr = typeof v === 'string' ? [v] : (Array.isArray(v) ? v : []); return arr[pi] || null; }
-  return null;
+  const arr = getProdImgs(it, li, pi);
+  return arr[0] || null;
+}
+// 제품 이미지 전체 배열 (1장이어도 배열)
+function getProdImgs(it, li, pi) {
+  if (it.prodImages) {
+    const v = it.prodImages[li + '_' + pi];
+    if (!v) return [];
+    return Array.isArray(v) ? v.filter(Boolean) : [v];
+  }
+  if (it.lookImages) { const v = it.lookImages[li]; const arr = typeof v === 'string' ? [v] : (Array.isArray(v) ? v : []); return arr[pi] ? [arr[pi]] : []; }
+  return [];
 }
 
 // 유튜브 ID 추출
@@ -350,10 +364,19 @@ function showItem(itemId, partNum) {
     const prods = look.products || [];
     if (prods.length === 0) continue;
     const prodHtml = prods.map((p, pi) => {
-      const img = getProdImg(it, li, pi);
+      const imgs = getProdImgs(it, li, pi);
+      let imgHtml;
+      if (imgs.length > 1) {
+        // 여러 장 → 3초씩 자동 전환 슬라이드
+        imgHtml = `<div class="prod-slide">${imgs.map((src, k) => `<img src="${src}" class="${k === 0 ? 'on' : ''}" alt="">`).join('')}</div>`;
+      } else if (imgs.length === 1) {
+        imgHtml = `<img src="${imgs[0]}" class="prod-img" alt="">`;
+      } else {
+        imgHtml = `<div class="prod-placeholder">✦</div>`;
+      }
       return `
       <div class="prod-row">
-        ${img ? `<img src="${img}" class="prod-img" alt="">` : `<div class="prod-placeholder">✦</div>`}
+        ${imgHtml}
         <div class="prod-info">
           <p class="prod-brand">${p.brand || '제품'}</p>
           ${p.productId ? `<p class="prod-id">${p.productId}</p>` : ''}
@@ -379,11 +402,48 @@ function showItem(itemId, partNum) {
     html += '<div class="empty"><div class="icon">✦</div><span>데이터 없음</span></div>';
   }
   container.innerHTML = html;
+  initSlides();
 }
 
+// ── 여러 장 사진 3초씩 자동 전환 ──
+let slideTimers = [];
+function clearSlides() { slideTimers.forEach(clearInterval); slideTimers = []; }
+function initSlides() {
+  clearSlides();
+  document.querySelectorAll('.prod-slide').forEach(el => {
+    const imgs = el.querySelectorAll('img');
+    if (imgs.length < 2) return;
+    let idx = 0;
+    const t = setInterval(() => {
+      imgs[idx].classList.remove('on');
+      idx = (idx + 1) % imgs.length;
+      imgs[idx].classList.add('on');
+    }, 3000);
+    slideTimers.push(t);
+  });
+}
+
+// ── 데이터 변경 감지 (바뀔 때만 다시 그림 → 슬라이드 안 끊김) ──
+function dataSig(items) {
+  return items.map(i => {
+    const im = i.prodImages || {};
+    const imgSig = Object.keys(im).sort().map(k => k + ':' + (Array.isArray(im[k]) ? im[k].length : 1)).join(',');
+    return [i.id, i.company, i.title || '', i.productList || '', imgSig, (i.partSplits || []).join(','), JSON.stringify(i.videoLinks || {}), i.searchKeywords || '', i.couponCode || '', i.status || ''].join('~');
+  }).join('§');
+}
+let lastSig = null;
+function tick() {
+  const all = loadItems();
+  const sig = dataSig(all);
+  if (sig === lastSig) return;
+  lastSig = sig;
+  renderNav();
+  if (currentItemId) showItem(currentItemId);
+}
 renderNav();
-window.addEventListener('storage', (e) => { if (e.key === STORAGE_KEY) { renderNav(); if (currentItemId) showItem(currentItemId); } });
-setInterval(() => { renderNav(); if (currentItemId) showItem(currentItemId); }, 3000);
+lastSig = dataSig(loadItems());
+window.addEventListener('storage', (e) => { if (e.key === STORAGE_KEY) tick(); });
+setInterval(tick, 2000);
 </script>
 </body>
 </html>
