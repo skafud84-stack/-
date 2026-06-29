@@ -2913,6 +2913,48 @@ function duplicateProduct(itemId, lookIdx, prodIdx) {
   save(); refreshLookEditor(itemId);
 }
 
+// ── 제품(옷) 삭제 ──
+function deleteProduct(itemId, lookIdx, prodIdx) {
+  const it = items.find(x => x.id === itemId);
+  if (!it) return;
+  const groups = parseLooksGrouped(it.productList);
+  const prod = groups[lookIdx]?.products?.[prodIdx];
+  if (!prod) return;
+  if (!confirm(`'${prod.brand || '이 제품'}' 삭제할까요?`)) return;
+  const oldImgs = rebuildProdImgMap(it, groups);
+  groups[lookIdx].products.splice(prodIdx, 1);
+  it.productList = rebuildProductList(groups);
+  remapProdImages(it, oldImgs, groups, null);
+  delete it.customCaption; delete it.partCaptions;
+  save(); refreshLookEditor(itemId);
+}
+
+// ── LOOK(룩) 전체 삭제 ──
+function deleteLook(itemId, lookIdx) {
+  const it = items.find(x => x.id === itemId);
+  if (!it) return;
+  const groups = parseLooksGrouped(it.productList);
+  if (!groups[lookIdx]) return;
+  const cnt = (groups[lookIdx].products || []).length;
+  if (!confirm(`LOOK ${lookIdx + 1} 전체를 삭제할까요?${cnt ? ` (제품 ${cnt}개 포함)` : ''}`)) return;
+  const oldImgs = rebuildProdImgMap(it, groups);
+  groups.splice(lookIdx, 1);
+  it.productList = rebuildProductList(groups);
+  remapProdImages(it, oldImgs, groups, null);
+  // LOOK 개수 갱신
+  it.lookCount = groups.length;
+  // 편 나누기 split 인덱스 보정 (삭제된 위치 기준 당기기)
+  if (Array.isArray(it.partSplits)) {
+    it.partSplits = [...new Set(
+      it.partSplits
+        .map(s => (s > lookIdx ? s - 1 : s))
+        .filter(s => s > 0 && s < groups.length)
+    )].sort((a, b) => a - b);
+  }
+  delete it.customCaption; delete it.partCaptions;
+  save(); refreshLookEditor(itemId);
+}
+
 // ── 제품을 다른 LOOK으로 이동 ──
 function moveProductToLook(itemId, fromLookIdx, fromProdIdx, toLookIdx) {
   const it = items.find(x => x.id === itemId);
@@ -3381,6 +3423,7 @@ function buildLookCards(it) {
           ${Array.from({length:totalLooks},(_, k) => `<option value="${k}" ${k===li?'selected':''}>${k+1}</option>`).join('')}
         </select>
         <button onclick="event.stopPropagation();duplicateProduct('${it.id}',${li},${pi})" class="text-[9px] opacity-0 group-hover/prod:opacity-60 hover:!opacity-100 transition-opacity" title="제품 복제" draggable="false">📋</button>
+        <button onclick="event.stopPropagation();deleteProduct('${it.id}',${li},${pi})" class="text-[9px] opacity-0 group-hover/prod:opacity-60 hover:!opacity-100 hover:!text-red-500 transition-all" title="제품 삭제" draggable="false">🗑️</button>
       </div>`;
     }).join('');
 
@@ -3399,6 +3442,7 @@ function buildLookCards(it) {
         <span class="text-xs font-bold flex-1">LOOK ${displayNum}</span>
         ${partLabel ? `<span class="text-[9px] font-bold text-pink-400">${partLabel}</span>` : ''}
         <span class="text-[10px] text-muted">${prods.length}개</span>
+        <button onclick="event.stopPropagation();deleteLook('${it.id}',${li})" class="text-[11px] opacity-30 hover:opacity-100 hover:text-red-500 transition-all flex-shrink-0" title="LOOK 삭제" draggable="false">🗑️</button>
       </div>
       <!-- 제품 목록 (각 제품에 이미지 포함) -->
       <div class="p-2 space-y-0.5">
