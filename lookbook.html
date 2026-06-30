@@ -203,6 +203,29 @@ function getProdImgs(it, li, pi) {
   return [];
 }
 
+// 검색코드/쿠폰: it 필드 없으면 캡션 텍스트(customCaption)에서 추출
+function extractCouponSearch(it) {
+  let sk = (it.searchKeywords || '').trim();
+  let cp = (it.couponCode || '').trim();
+  if (!sk || !cp) {
+    const cap = [it.customCaption || '', it.guide || ''].join('\n');
+    if (cap.trim()) {
+      if (!sk) {
+        const m = cap.match(/검색\s*(?:창)?\s*코드\s*[:：]\s*\[?\s*([^\]\n]+?)\s*\]?\s*(?:\n|$)/);
+        if (m && m[1].trim() && !/^\[?\s*\]?$/.test(m[1].trim())) sk = m[1].trim();
+      }
+      if (!cp) {
+        const m = cap.match(/쿠폰\s*[:：]\s*\[?\s*([^\]\n]+?)\s*\]?\s*(?:\n|$)/);
+        if (m && m[1].trim() && !/^\[?\s*\]?$/.test(m[1].trim())) cp = m[1].trim();
+      }
+    }
+  }
+  // 빈 대괄호 [ ] 같은 플레이스홀더 제거
+  if (/^\[?\s*\]?$/.test(sk)) sk = '';
+  if (/^\[?\s*\]?$/.test(cp)) cp = '';
+  return { sk, cp };
+}
+
 // 유튜브 ID 추출
 function getYouTubeId(url) {
   if (!url) return null;
@@ -314,20 +337,23 @@ function showItem(itemId, partNum) {
     if (range) { fromIdx = range.from; toIdx = range.to; }
   }
 
+  // 검색코드/쿠폰: 필드 우선, 없으면 캡션 텍스트에서 추출
+  const cs = extractCouponSearch(it);
+
   // 검색 키워드
-  if (it.searchKeywords) {
-    html += `<div class="banner search-banner" onclick="copyToClipboard('${it.searchKeywords.replace(/'/g,"\\'")}', this)">
+  if (cs.sk) {
+    html += `<div class="banner search-banner" onclick="copyToClipboard('${cs.sk.replace(/'/g,"\\'")}', this)">
       <p class="label">검색창 코드</p>
-      <p class="value">${it.searchKeywords}</p>
+      <p class="value">${cs.sk}</p>
       <p class="copy-hint">탭하면 복사</p>
     </div>`;
   }
 
   // 쿠폰
-  if (it.couponCode) {
-    html += `<div class="banner" onclick="copyToClipboard('${it.couponCode.replace(/'/g,"\\'")}', this)">
+  if (cs.cp) {
+    html += `<div class="banner" onclick="copyToClipboard('${cs.cp.replace(/'/g,"\\'")}', this)">
       <p class="label">할인 쿠폰</p>
-      <p class="value">${it.couponCode}</p>
+      <p class="value">${cs.cp}</p>
       <p class="copy-hint">탭하면 복사</p>
     </div>`;
   }
@@ -428,7 +454,7 @@ function dataSig(items) {
   return items.map(i => {
     const im = i.prodImages || {};
     const imgSig = Object.keys(im).sort().map(k => k + ':' + (Array.isArray(im[k]) ? im[k].length : 1)).join(',');
-    return [i.id, i.company, i.title || '', i.productList || '', imgSig, (i.partSplits || []).join(','), JSON.stringify(i.videoLinks || {}), i.searchKeywords || '', i.couponCode || '', i.status || ''].join('~');
+    return [i.id, i.company, i.title || '', i.productList || '', imgSig, (i.partSplits || []).join(','), JSON.stringify(i.videoLinks || {}), i.searchKeywords || '', i.couponCode || '', i.customCaption || '', i.guide || '', i.status || ''].join('~');
   }).join('§');
 }
 let lastSig = null;

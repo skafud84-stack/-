@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>남령's 영상 메이커 🎬</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', sans-serif; background: #faf7f8; color: #1a1a1a; min-height: 100vh; padding: 20px 16px 60px; }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 900; text-align: center; margin-bottom: 4px; }
+  .sub { text-align: center; color: #888; font-size: 12px; margin-bottom: 22px; }
+  .card { background: #fff; border: 1px solid #eee; border-radius: 16px; padding: 18px; margin-bottom: 16px; box-shadow: 0 2px 10px rgba(0,0,0,.03); }
+  .card h2 { font-size: 13px; font-weight: 800; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+  .step { width: 20px; height: 20px; border-radius: 6px; background: #ec4899; color: #fff; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; font-weight: 900; }
+
+  .drop { border: 2px dashed #f0aecb; border-radius: 12px; padding: 26px 16px; text-align: center; cursor: pointer; transition: .15s; color: #c0708f; font-size: 13px; font-weight: 600; }
+  .drop:hover, .drop.over { border-color: #ec4899; background: #fdf2f8; color: #ec4899; }
+
+  .thumbs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .thumb { position: relative; width: 64px; height: 96px; border-radius: 8px; overflow: hidden; border: 1px solid #eee; cursor: grab; flex-shrink: 0; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb .num { position: absolute; top: 2px; left: 2px; background: rgba(0,0,0,.65); color: #fff; font-size: 9px; font-weight: 800; padding: 1px 4px; border-radius: 4px; }
+  .thumb .del { position: absolute; top: 2px; right: 2px; width: 16px; height: 16px; border-radius: 50%; background: #ef4444; color: #fff; font-size: 10px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .thumb.dragging { opacity: .4; }
+
+  select, input[type=range] { font-family: inherit; }
+  .row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+  .row label { font-size: 12px; font-weight: 700; color: #555; min-width: 92px; }
+  select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; background: #fff; cursor: pointer; }
+  input[type=range] { flex: 1; min-width: 120px; accent-color: #ec4899; }
+  .val { font-size: 13px; font-weight: 800; color: #ec4899; min-width: 52px; text-align: right; }
+
+  .ds-pick { display: flex; gap: 8px; flex-wrap: wrap; }
+  .ds-btn { padding: 7px 14px; border: 1.5px solid #ddd; border-radius: 20px; background: #fff; font-size: 12px; font-weight: 700; cursor: pointer; transition: .15s; }
+  .ds-btn:hover { border-color: #ec4899; color: #ec4899; }
+
+  .btn-main { width: 100%; padding: 16px; background: #ec4899; color: #fff; border: none; border-radius: 12px; font-size: 15px; font-weight: 900; cursor: pointer; transition: .15s; margin-top: 4px; }
+  .btn-main:hover { background: #db2777; }
+  .btn-main:disabled { background: #ddd; cursor: not-allowed; }
+
+  .preview-box { text-align: center; }
+  #stage { width: 100%; max-width: 270px; border-radius: 12px; background: #000; display: block; margin: 0 auto; aspect-ratio: 9/16; }
+  .status { text-align: center; font-size: 12px; color: #888; margin-top: 10px; min-height: 18px; }
+  .bar { height: 6px; background: #f0e0e8; border-radius: 3px; overflow: hidden; margin-top: 8px; display: none; }
+  .bar > div { height: 100%; width: 0%; background: #ec4899; transition: width .1s; }
+  .hint { font-size: 11px; color: #aaa; margin-top: 8px; line-height: 1.6; }
+  a.dl { display: none; margin-top: 12px; text-align: center; padding: 14px; background: #111; color: #fff; border-radius: 12px; font-weight: 800; text-decoration: none; font-size: 14px; }
+  .music-name { font-size: 12px; color: #16a34a; font-weight: 700; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a href="index.html" style="display:inline-block;color:#888;font-size:12px;text-decoration:none;margin-bottom:10px;">← 대시보드로</a>
+  <h1>🎬 영상 메이커</h1>
+  <p class="sub">사진 여러 장 + 음악 → 한 장씩 뿅뿅 넘어가는 세로 영상 (릴스·틱톡용)</p>
+
+  <!-- 1. 사진 -->
+  <div class="card">
+    <h2><span class="step">1</span> 사진 넣기</h2>
+    <div class="ds-pick" id="dsPick" style="margin-bottom:12px;"></div>
+    <div class="drop" id="drop">📷 여기 클릭 / 드래그 / 사진 여러 장 한번에 선택<br><span style="font-size:11px;opacity:.7;">(순서는 아래에서 드래그로 바꿔요)</span></div>
+    <input type="file" id="fileInput" accept="image/*" multiple hidden>
+    <div class="thumbs" id="thumbs"></div>
+  </div>
+
+  <!-- 2. 음악 -->
+  <div class="card">
+    <h2><span class="step">2</span> 음악 (선택)</h2>
+    <div class="drop" id="musicDrop" style="padding:18px;">🎵 음악 파일 클릭 / 드래그 (mp3, m4a, wav)</div>
+    <input type="file" id="musicInput" accept="audio/*" hidden>
+    <div class="music-name" id="musicName"></div>
+    <p class="hint">💡 저작권 무료 음악: 유튜브 오디오 보관함, Pixabay Music에서 받아서 넣으면 돼요.</p>
+  </div>
+
+  <!-- 3. 설정 -->
+  <div class="card">
+    <h2><span class="step">3</span> 설정</h2>
+    <div class="row">
+      <label>장당 시간</label>
+      <input type="range" id="secPer" min="1" max="6" step="0.5" value="3">
+      <span class="val" id="secVal">3초</span>
+    </div>
+    <div class="row">
+      <label>화면 비율</label>
+      <select id="ratio">
+        <option value="9:16" selected>9:16 세로 (릴스·틱톡·쇼츠)</option>
+        <option value="1:1">1:1 정사각 (피드)</option>
+        <option value="16:9">16:9 가로</option>
+      </select>
+    </div>
+    <div class="row">
+      <label>전환 효과</label>
+      <select id="fx">
+        <option value="fade" selected>부드럽게 (페이드)</option>
+        <option value="zoom">뿅 (줌인)</option>
+        <option value="cut">탁탁 (바로 전환)</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- 4. 미리보기 & 만들기 -->
+  <div class="card preview-box">
+    <h2><span class="step">4</span> 미리보기 & 만들기</h2>
+    <canvas id="stage" width="720" height="1280"></canvas>
+    <div class="bar" id="bar"><div id="barFill"></div></div>
+    <div class="status" id="status">사진을 먼저 넣어주세요</div>
+    <button class="btn-main" id="previewBtn" style="margin-top:12px;">▶ 미리보기 재생</button>
+    <button class="btn-main" id="makeBtn" disabled>🎬 영상 만들기 (다운로드)</button>
+    <a class="dl" id="dlLink" download>⬇ 영상 저장하기</a>
+    <p class="hint">영상은 화면 길이만큼 시간이 걸려요 (사진 5장·3초면 약 15초). 만드는 동안 이 탭을 그대로 두세요.</p>
+  </div>
+</div>
+
+<script>
+const $ = s => document.getElementById(s);
+let images = [];      // {img: Image, src}
+let musicFile = null;
+let busy = false;
+
+// ── 이미지 로드 ──
+function addFiles(files) {
+  [...files].filter(f => f.type.startsWith('image/')).forEach(f => {
+    const url = URL.createObjectURL(f);
+    const img = new Image();
+    img.onload = () => { images.push({ img, src: url }); renderThumbs(); };
+    img.src = url;
+  });
+}
+function addSrc(src) {
+  const img = new Image();
+  img.onload = () => { images.push({ img, src }); renderThumbs(); };
+  img.src = src;
+}
+
+function renderThumbs() {
+  const c = $('thumbs');
+  c.innerHTML = images.map((it, i) =>
+    `<div class="thumb" draggable="true" data-i="${i}">
+      <span class="num">${i + 1}</span>
+      <button class="del" data-del="${i}">✕</button>
+      <img src="${it.src}">
+    </div>`).join('');
+  updateState();
+}
+
+// 썸네일: 삭제 + 드래그 순서변경
+$('thumbs').addEventListener('click', e => {
+  const d = e.target.dataset.del;
+  if (d !== undefined) { images.splice(+d, 1); renderThumbs(); }
+});
+let dragI = null;
+$('thumbs').addEventListener('dragstart', e => {
+  const t = e.target.closest('.thumb'); if (!t) return;
+  dragI = +t.dataset.i; t.classList.add('dragging');
+});
+$('thumbs').addEventListener('dragend', e => {
+  const t = e.target.closest('.thumb'); if (t) t.classList.remove('dragging');
+});
+$('thumbs').addEventListener('dragover', e => {
+  e.preventDefault();
+  const t = e.target.closest('.thumb'); if (!t || dragI === null) return;
+  const overI = +t.dataset.i;
+  if (overI === dragI) return;
+  const [m] = images.splice(dragI, 1);
+  images.splice(overI, 0, m);
+  dragI = overI; renderThumbs();
+  // 드래그 중인 요소 다시 표시
+  const nt = $('thumbs').querySelector(`[data-i="${overI}"]`); if (nt) nt.classList.add('dragging');
+});
+
+// 드롭/클릭 업로드
+$('drop').addEventListener('click', () => $('fileInput').click());
+$('fileInput').addEventListener('change', e => { addFiles(e.target.files); e.target.value = ''; });
+['dragover', 'dragenter'].forEach(ev => $('drop').addEventListener(ev, e => { e.preventDefault(); $('drop').classList.add('over'); }));
+['dragleave', 'drop'].forEach(ev => $('drop').addEventListener(ev, e => { e.preventDefault(); $('drop').classList.remove('over'); }));
+$('drop').addEventListener('drop', e => addFiles(e.dataTransfer.files));
+
+// 붙여넣기
+document.addEventListener('paste', e => {
+  const items = e.clipboardData?.items; if (!items) return;
+  for (const it of items) if (it.type.startsWith('image/')) addFiles([it.getAsFile()]);
+});
+
+// ── 음악 ──
+$('musicDrop').addEventListener('click', () => $('musicInput').click());
+$('musicInput').addEventListener('change', e => setMusic(e.target.files[0]));
+['dragover', 'dragenter'].forEach(ev => $('musicDrop').addEventListener(ev, e => { e.preventDefault(); $('musicDrop').classList.add('over'); }));
+['dragleave', 'drop'].forEach(ev => $('musicDrop').addEventListener(ev, e => { e.preventDefault(); $('musicDrop').classList.remove('over'); }));
+$('musicDrop').addEventListener('drop', e => { if (e.dataTransfer.files[0]) setMusic(e.dataTransfer.files[0]); });
+function setMusic(f) { if (!f || !f.type.startsWith('audio/')) return; musicFile = f; $('musicName').textContent = '🎵 ' + f.name; }
+
+// ── 대시보드 연동 ──
+function loadDashboard() {
+  let items = [];
+  try { items = JSON.parse(localStorage.getItem('sponsorship_dashboard_v1')) || []; } catch (e) {}
+  const pick = $('dsPick');
+  const valid = items.filter(it => it.prodImages && Object.keys(it.prodImages).length);
+  if (!valid.length) { pick.innerHTML = '<span style="font-size:11px;color:#bbb;">대시보드에 등록된 협찬 사진이 없어요 (직접 올려도 OK)</span>'; return; }
+  pick.innerHTML = '<span style="font-size:11px;color:#888;width:100%;">대시보드에서 불러오기 👇</span>' +
+    valid.map(it => `<button class="ds-btn" data-id="${it.id}">${it.company || '협찬'}</button>`).join('');
+  pick.querySelectorAll('.ds-btn').forEach(b => b.addEventListener('click', () => {
+    const it = valid.find(x => x.id === b.dataset.id);
+    if (!it) return;
+    // LOOK·제품 순서대로 모든 사진(배열 포함) 평탄화
+    const keys = Object.keys(it.prodImages).sort((a, c) => {
+      const [la, pa] = a.split('_').map(Number), [lc, pc] = c.split('_').map(Number);
+      return la - lc || pa - pc;
+    });
+    keys.forEach(k => {
+      const v = it.prodImages[k];
+      (Array.isArray(v) ? v : [v]).forEach(src => src && addSrc(src));
+    });
+  }));
+}
+
+// ── 설정 ──
+$('secPer').addEventListener('input', e => $('secVal').textContent = e.target.value + '초');
+function getDims() {
+  const r = $('ratio').value;
+  if (r === '1:1') return [1080, 1080];
+  if (r === '16:9') return [1280, 720];
+  return [720, 1280];
+}
+
+// ── 캔버스 그리기 ──
+function drawCover(ctx, img, W, H, scale = 1) {
+  const ir = img.width / img.height, cr = W / H;
+  let w, h;
+  if (ir > cr) { h = H * scale; w = h * ir; } else { w = W * scale; h = w / ir; }
+  ctx.drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
+}
+function drawFrame(ctx, W, H, idx, localT, fx) {
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  const cur = images[idx]?.img; if (!cur) return;
+  const nxt = images[idx + 1]?.img;
+  if (fx === 'zoom') {
+    drawCover(ctx, cur, W, H, 1 + localT * 0.12);
+  } else if (fx === 'cut') {
+    drawCover(ctx, cur, W, H, 1);
+  } else { // fade: 끝 20%에서 다음 장 페이드인
+    drawCover(ctx, cur, W, H, 1);
+    if (nxt && localT > 0.8) {
+      ctx.globalAlpha = (localT - 0.8) / 0.2;
+      drawCover(ctx, nxt, W, H, 1);
+      ctx.globalAlpha = 1;
+    }
+  }
+}
+
+// ── 미리보기 ──
+function play(record) {
+  return new Promise(async (resolve) => {
+    if (!images.length || busy) return resolve();
+    busy = true;
+    const [W, H] = getDims();
+    const canvas = $('stage'); canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    const secPer = parseFloat($('secPer').value);
+    const fx = $('fx').value;
+    const per = secPer * 1000;
+    const total = images.length * per;
+
+    let rec, chunks = [], audioCtx, srcNode;
+    if (record) {
+      const stream = canvas.captureStream(30);
+      // 음악 합성
+      if (musicFile) {
+        try {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          const buf = await audioCtx.decodeAudioData(await musicFile.arrayBuffer());
+          const dest = audioCtx.createMediaStreamDestination();
+          srcNode = audioCtx.createBufferSource();
+          srcNode.buffer = buf; srcNode.loop = true;
+          srcNode.connect(dest);
+          dest.stream.getAudioTracks().forEach(t => stream.addTrack(t));
+          srcNode.start();
+        } catch (e) { console.warn('음악 합성 실패', e); }
+      }
+      const mime = pickMime();
+      rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 6000000 });
+      rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+      rec.onstop = () => {
+        const blob = new Blob(chunks, { type: mime });
+        const url = URL.createObjectURL(blob);
+        const ext = mime.includes('mp4') ? 'mp4' : 'webm';
+        const a = $('dlLink');
+        a.href = url; a.download = `namryeong_${Date.now()}.${ext}`;
+        a.style.display = 'block';
+        a.textContent = `⬇ 영상 저장하기 (.${ext})`;
+        $('status').textContent = '✅ 완성! 아래 버튼으로 저장하세요';
+        $('bar').style.display = 'none';
+        try { srcNode && srcNode.stop(); audioCtx && audioCtx.close(); } catch (e) {}
+        busy = false;
+        resolve();
+      };
+      rec.start();
+      $('bar').style.display = 'block';
+    }
+
+    const start = performance.now();
+    const iv = setInterval(() => {
+      const t = performance.now() - start;
+      if (t >= total) {
+        clearInterval(iv);
+        // 마지막 프레임 고정
+        drawFrame(ctx, W, H, images.length - 1, 0.99, 'cut');
+        if (record && rec && rec.state !== 'inactive') { setTimeout(() => rec.stop(), 150); }
+        else { busy = false; $('status').textContent = '미리보기 끝'; updateState(); resolve(); }
+        return;
+      }
+      const idx = Math.min(images.length - 1, Math.floor(t / per));
+      const localT = (t % per) / per;
+      drawFrame(ctx, W, H, idx, localT, fx);
+      if (record) {
+        const p = Math.round(t / total * 100);
+        $('barFill').style.width = p + '%';
+        $('status').textContent = `🎬 영상 만드는 중… ${p}%`;
+      } else {
+        $('status').textContent = `▶ 미리보기 ${idx + 1}/${images.length}`;
+      }
+    }, 33);
+  });
+}
+
+function pickMime() {
+  const list = ['video/mp4;codecs=h264,aac', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+  return list.find(t => MediaRecorder.isTypeSupported(t)) || 'video/webm';
+}
+
+function updateState() {
+  const has = images.length > 0;
+  $('makeBtn').disabled = !has || busy;
+  if (has) {
+    const sec = (images.length * parseFloat($('secPer').value)).toFixed(1);
+    $('status').textContent = `사진 ${images.length}장 · 약 ${sec}초 영상`;
+    // 첫 장 캔버스에 표시
+    const [W, H] = getDims();
+    const canvas = $('stage'); canvas.width = W; canvas.height = H;
+    drawFrame(canvas.getContext('2d'), W, H, 0, 0, 'cut');
+  } else {
+    $('status').textContent = '사진을 먼저 넣어주세요';
+  }
+}
+
+$('previewBtn').addEventListener('click', () => { if (!busy) play(false); });
+$('makeBtn').addEventListener('click', async () => {
+  if (busy || !images.length) return;
+  $('dlLink').style.display = 'none';
+  $('makeBtn').disabled = true; $('previewBtn').disabled = true;
+  await play(true);
+  $('makeBtn').disabled = false; $('previewBtn').disabled = false;
+});
+$('ratio').addEventListener('change', updateState);
+$('secPer').addEventListener('input', updateState);
+
+loadDashboard();
+updateState();
+</script>
+</body>
+</html>
