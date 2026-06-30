@@ -3746,6 +3746,107 @@ function generatePartCaption(it, partNum) {
   return lines.join('\n').trim();
 }
 
+// ===== 📱 업로드용 플랫폼별 제목·캡션 (유튜브/인스타/틱톡) =====
+let _platTab = 'youtube';
+const PLAT_INFO = {
+  youtube:   { name: '유튜브', emoji: '▶️', hasTitle: true },
+  instagram: { name: '인스타', emoji: '📸', hasTitle: false },
+  tiktok:    { name: '틱톡', emoji: '🎵', hasTitle: false },
+};
+function getPlatformMeta(it) {
+  if (!it.platformMeta) it.platformMeta = {
+    common: { title: '', caption: '', tags: '' },
+    youtube: { title: '', caption: '', tags: '' },
+    instagram: { title: '', caption: '', tags: '' },
+    tiktok: { title: '', caption: '', tags: '' },
+  };
+  return it.platformMeta;
+}
+function buildPlatformCaptionHTML(it) {
+  const pm = getPlatformMeta(it);
+  const tabBtns = Object.keys(PLAT_INFO).map(k => {
+    const active = k === _platTab;
+    return `<button onclick="switchPlatformTab('${it.id}','${k}')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${active ? 'bg-violet-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-muted'}">${PLAT_INFO[k].emoji} ${PLAT_INFO[k].name}</button>`;
+  }).join('');
+  return `
+    <div class="flex items-center justify-between mb-2">
+      <div><p class="text-sm font-bold">📱 업로드용 제목·캡션</p>
+      <p class="text-[10px] text-muted">공통칸에 쓰면 3개에 자동 복사 · 플랫폼별로 복사해서 한방업로드에 붙여넣기</p></div>
+    </div>
+    <input id="pmCommonTitle_${it.id}" value="${safe(pm.common.title)}" oninput="syncPlatformCommon('${it.id}')" placeholder="제목 (공통)" class="w-full border border-c rounded-lg px-3 py-2 mb-2 text-sm bg-white dark:bg-gray-900 outline-none focus:border-violet-400" ${isShareMode ? 'readonly' : ''}>
+    <textarea id="pmCommonCap_${it.id}" oninput="syncPlatformCommon('${it.id}')" placeholder="캡션/설명 (공통)" rows="3" class="w-full border border-c rounded-lg px-3 py-2 mb-2 text-sm bg-white dark:bg-gray-900 outline-none focus:border-violet-400" ${isShareMode ? 'readonly' : ''}>${safe(pm.common.caption)}</textarea>
+    <input id="pmCommonTags_${it.id}" value="${safe(pm.common.tags)}" oninput="syncPlatformCommon('${it.id}')" placeholder="#해시태그 #공통" class="w-full border border-c rounded-lg px-3 py-2 mb-1 text-sm bg-white dark:bg-gray-900 outline-none focus:border-violet-400" ${isShareMode ? 'readonly' : ''}>
+    ${!isShareMode ? `<button onclick="pmFillFromCaption('${it.id}')" class="text-[10px] text-violet-600 font-semibold mb-3 hover:underline">↪ 위에서 정리한 제품 캡션 가져오기</button>` : '<div class="mb-3"></div>'}
+    <div class="flex gap-1 mb-2">${tabBtns}</div>
+    <div id="pmPanel_${it.id}">${buildPlatformPanel(it)}</div>
+  `;
+}
+function buildPlatformPanel(it) {
+  const pm = getPlatformMeta(it);
+  const cur = _platTab;
+  const info = PLAT_INFO[cur];
+  const m = pm[cur];
+  return `
+    ${info.hasTitle ? `<div class="flex gap-1 mb-2">
+      <input id="pmTitle_${it.id}" value="${safe(m.title)}" oninput="savePlatformField('${it.id}','${cur}','title',this.value)" placeholder="${info.name} 제목" class="flex-1 border border-c rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 outline-none focus:border-violet-400" ${isShareMode ? 'readonly' : ''}>
+      <button onclick="copyPlatformField('${it.id}','${cur}','title',this)" class="bg-black text-white text-[10px] font-bold px-3 rounded-lg hover:opacity-80 flex-shrink-0">제목<br>복사</button>
+    </div>` : ''}
+    <textarea id="pmCap_${it.id}" oninput="savePlatformField('${it.id}','${cur}','caption',this.value)" placeholder="${info.name} 캡션/설명" rows="5" class="w-full border border-c rounded-lg px-3 py-2 mb-2 text-sm bg-white dark:bg-gray-900 outline-none focus:border-violet-400" ${isShareMode ? 'readonly' : ''}>${safe(m.caption)}</textarea>
+    <input id="pmTags_${it.id}" value="${safe(m.tags)}" oninput="savePlatformField('${it.id}','${cur}','tags',this.value)" placeholder="#해시태그" class="w-full border border-c rounded-lg px-3 py-2 mb-2 text-sm bg-white dark:bg-gray-900 outline-none focus:border-violet-400" ${isShareMode ? 'readonly' : ''}>
+    <button onclick="copyPlatformAll('${it.id}','${cur}',this)" class="w-full bg-violet-600 text-white text-xs font-bold py-2.5 rounded-lg hover:bg-violet-700 transition-colors">📋 ${info.name}용 전체 복사 (한방업로드에 붙여넣기)</button>
+  `;
+}
+function switchPlatformTab(itemId, p) {
+  _platTab = p;
+  const it = items.find(x => x.id === itemId); if (!it) return;
+  const area = document.getElementById('platformCaptionArea_' + itemId);
+  if (area) area.innerHTML = buildPlatformCaptionHTML(it);
+}
+function syncPlatformCommon(itemId) {
+  const it = items.find(x => x.id === itemId); if (!it) return;
+  const pm = getPlatformMeta(it);
+  pm.common.title = document.getElementById('pmCommonTitle_' + itemId)?.value || '';
+  pm.common.caption = document.getElementById('pmCommonCap_' + itemId)?.value || '';
+  pm.common.tags = document.getElementById('pmCommonTags_' + itemId)?.value || '';
+  ['youtube', 'instagram', 'tiktok'].forEach(k => { pm[k] = { title: pm.common.title, caption: pm.common.caption, tags: pm.common.tags }; });
+  save();
+  const panel = document.getElementById('pmPanel_' + itemId);
+  if (panel) panel.innerHTML = buildPlatformPanel(it);
+}
+function savePlatformField(itemId, platform, field, value) {
+  const it = items.find(x => x.id === itemId); if (!it) return;
+  getPlatformMeta(it)[platform][field] = value;
+  save();
+}
+function pmFillFromCaption(itemId) {
+  const it = items.find(x => x.id === itemId); if (!it) return;
+  const cap = generateCaption(it);
+  const pm = getPlatformMeta(it);
+  pm.common.caption = cap;
+  ['youtube', 'instagram', 'tiktok'].forEach(k => { pm[k].caption = cap; });
+  save();
+  const area = document.getElementById('platformCaptionArea_' + itemId);
+  if (area) area.innerHTML = buildPlatformCaptionHTML(it);
+}
+function copyTextFlash(text, btn) {
+  navigator.clipboard.writeText(text || '').then(() => {
+    if (btn) { const o = btn.innerHTML; btn.innerHTML = '✅ 복사됨!'; setTimeout(() => btn.innerHTML = o, 1500); }
+  });
+}
+function copyPlatformField(itemId, platform, field, btn) {
+  const it = items.find(x => x.id === itemId); if (!it) return;
+  copyTextFlash(getPlatformMeta(it)[platform][field] || '', btn);
+}
+function copyPlatformAll(itemId, platform, btn) {
+  const it = items.find(x => x.id === itemId); if (!it) return;
+  const m = getPlatformMeta(it)[platform];
+  const parts = [];
+  if (PLAT_INFO[platform].hasTitle && m.title) parts.push(m.title);
+  if (m.caption) parts.push(m.caption);
+  if (m.tags) parts.push(m.tags);
+  copyTextFlash(parts.join('\n\n'), btn);
+}
+
 function copyCaption(itemId) {
   const it = items.find(x => x.id === itemId);
   if (!it) return;
@@ -3903,6 +4004,11 @@ function openDetail(itemId) {
           ${buildDetailCaptionHTML(it)}
           </div>
         </div>
+      </div>
+
+      <!-- 📱 업로드용 플랫폼별 제목·캡션 -->
+      <div class="card rounded-xl p-4 border-l-4 border-violet-400">
+        <div id="platformCaptionArea_${it.id}">${buildPlatformCaptionHTML(it)}</div>
       </div>
 
       <!-- 4. 가이드라인 카드 -->
