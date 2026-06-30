@@ -190,10 +190,11 @@ $('musicInput').addEventListener('change', e => setMusic(e.target.files[0]));
 $('musicDrop').addEventListener('drop', e => { if (e.dataTransfer.files[0]) setMusic(e.dataTransfer.files[0]); });
 function setMusic(f) { if (!f || !f.type.startsWith('audio/')) return; musicFile = f; $('musicName').textContent = '🎵 ' + f.name; }
 
-// ── 대시보드 연동 ──
-function loadDashboard() {
-  let items = [];
-  try { items = JSON.parse(localStorage.getItem('sponsorship_dashboard_v1')) || []; } catch (e) {}
+// ── 대시보드 연동 (클라우드 발행본 우선) ──
+function loadDashboard(items) {
+  if (!items) {
+    try { items = JSON.parse(localStorage.getItem('sponsorship_dashboard_v1')) || []; } catch (e) { items = []; }
+  }
   const pick = $('dsPick');
   const valid = items.filter(it => it.prodImages && Object.keys(it.prodImages).length);
   if (!valid.length) { pick.innerHTML = '<span style="font-size:11px;color:#bbb;">대시보드에 등록된 협찬 사진이 없어요 (직접 올려도 OK)</span>'; return; }
@@ -355,6 +356,7 @@ $('ratio').addEventListener('change', updateState);
 $('secPer').addEventListener('input', updateState);
 
 loadDashboard();
+fetch('data.json?t=' + Date.now()).then(r => r.ok ? r.json() : null).then(d => { if (Array.isArray(d) && d.length) loadDashboard(d); }).catch(() => {});
 updateState();
 </script>
 </body>

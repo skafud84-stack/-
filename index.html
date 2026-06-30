@@ -167,6 +167,8 @@
       <div class="relative">
         <button onclick="toggleMenu()" class="card px-3 py-2 rounded-lg text-sm">⋯</button>
         <div id="menu" class="hidden absolute right-0 mt-2 card rounded-lg shadow-lg p-2 w-48 z-40">
+          <button onclick="publishData()" class="block w-full text-left px-3 py-2 bg-green-50 dark:bg-green-900/40 hover:bg-green-100 dark:hover:bg-green-900 rounded text-sm font-bold text-green-700 dark:text-green-300">☁️ 발행 (폰·팔로워한테 보이게)</button>
+          <hr class="my-1 border-c">
           <button onclick="exportJSON()" class="block w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-sm">📦 JSON 백업</button>
           <button onclick="importJSON()" class="block w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-sm">📥 JSON 가져오기</button>
           <button onclick="copyShareLink()" class="block w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-sm">🔗 공유 링크 복사</button>
@@ -4143,6 +4145,23 @@ function exportJSON() {
   a.click();
   URL.revokeObjectURL(url);
   toggleMenu();
+}
+
+// 클라우드 발행: data.json 파일로 내보내기 (폰·팔로워 어디서든 보이게)
+function publishData() {
+  const blob = new Blob([JSON.stringify(items)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'data.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  toggleMenu();
+  const toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;background:#16a34a;color:#fff;padding:14px 20px;border-radius:12px;font-weight:700;font-size:14px;box-shadow:0 4px 20px rgba(0,0,0,.2);max-width:90%;text-align:center;line-height:1.5';
+  toast.innerHTML = '✅ data.json 저장됨!<br><span style="font-size:12px;font-weight:500;">이 파일을 클로드한테 주면 폰·팔로워한테 반영돼요</span>';
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 5000);
 }
 
 function importJSON() {

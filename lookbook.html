@@ -159,7 +159,10 @@
 <script>
 const STORAGE_KEY = 'sponsorship_dashboard_v1';
 
+// 클라우드 발행본(data.json) 우선 — 폰·팔로워 어디서든 동일하게 보임
+let CLOUD = null;
 function loadItems() {
+  if (CLOUD && CLOUD.length) return CLOUD;
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
   catch(e) { return []; }
 }
@@ -466,10 +469,20 @@ function tick() {
   renderNav();
   if (currentItemId) showItem(currentItemId);
 }
+// 클라우드 발행본 불러오기 (있으면 그걸로, 없으면 localStorage)
+function fetchCloud() {
+  fetch('data.json?t=' + Date.now())
+    .then(r => r.ok ? r.json() : null)
+    .then(d => { if (Array.isArray(d)) { CLOUD = d; lastSig = null; tick(); } })
+    .catch(() => {});
+}
+
 renderNav();
 lastSig = dataSig(loadItems());
+fetchCloud();
 window.addEventListener('storage', (e) => { if (e.key === STORAGE_KEY) tick(); });
 setInterval(tick, 2000);
+setInterval(fetchCloud, 15000); // 발행본 갱신 주기적 반영
 </script>
 </body>
 </html>
