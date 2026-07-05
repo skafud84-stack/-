@@ -76,28 +76,62 @@ module.exports = async (req, res) => {
     try { host = new URL(url).hostname; } catch (e) { return res.status(400).json({ error: 'bad url' }); }
     if (!ALLOW_PAGE.test(host)) return res.status(400).json({ error: 'host not allowed: ' + host });
 
-    const r = await fetch(url, {
-      redirect: 'follow',
-      headers: {
-        'User-Agent': UA,
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-        'Accept-Language': 'ko-KR,ko;q=0.9,en;q=0.8',
-      },
-    });
-    const html = await r.text();
-    const image = pickImage(html);
-    const price = pickPrice(html);
-    const title = pickTitle(html);
+    const HEADERS = {
+      'User-Agent': UA,
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+      'Accept-Language': 'ko-KR,ko;q=0.9,en;q=0.8',
+    };
+
+    // 1차: 직접 접근 (shein.top 리다이렉트 따라감)
+    let r = await fetch(url, { redirect: 'follow', headers: HEADERS });
+    let html = await r.text();
+    let finalUrl = r.url;
+
+    // 캡차 챌린지로 튕기면 → 챌린지 URL 속 redirection 파라미터에 진짜 상품 URL이 있음 → 재시도
+    if (/\/risk\/challenge/i.test(finalUrl)) {
+      try {
+        const real = new URL(finalUrl).searchParams.get('redirection');
+        if (real && ALLOW_PAGE.test(new URL(real).hostname)) {
+          finalUrl = real;
+          r = await fetch(real, { redirect: 'follow', headers: HEADERS });
+          if (!/\/risk\/challenge/i.test(r.url)) { html = await r.text(); finalUrl = r.url; }
+          else html = '';
+        }
+      } catch (e) { /* 무시 */ }
+    }
+
+    let image = pickImage(html);
+    let price = pickPrice(html);
+    let title = pickTitle(html);
+    let via = 'direct';
+
+    // 2차 폴백: microlink.io (무료 미리보기 서비스 — 헤드리스 브라우저로 렌더)
+    if (!image) {
+      try {
+        const target = /\/risk\/challenge/i.test(finalUrl) || !finalUrl ? url : finalUrl;
+        const mr = await fetch('https://api.microlink.io/?url=' + encodeURIComponent(target), { headers: { 'User-Agent': UA } });
+        const mj = await mr.json();
+        if (mj && mj.status === 'success' && mj.data) {
+          if (mj.data.image && mj.data.image.url) { image = mj.data.image.url; via = 'microlink'; }
+          if (!title && mj.data.title) title = mj.data.title;
+          // microlink 설명란에 가격이 섞여있는 경우
+          if (!price && mj.data.description) {
+            const pm = (mj.data.description).match(/₩\s*([\d,]{3,})/) || (mj.data.description).match(/([\d,]{4,})\s*원/);
+            if (pm) price = pm[1].replace(/[^\d]/g, '');
+          }
+        }
+      } catch (e) { /* 무시 */ }
+    }
 
     return res.status(200).json({
       ok: true,
-      finalUrl: r.url,
+      finalUrl,
       status: r.status,
       image,
       price,
       title,
-      // 디버그: 차단 여부 판단용
-      blocked: r.status !== 200 || (!image && !price && /captcha|challenge|access denied|robot/i.test(html.slice(0, 3000))),
+      via,
+      blocked: /\/risk\/challenge/i.test(r.url || ''),
     });
   } catch (e) {
     return res.status(500).json({ error: e.message });
