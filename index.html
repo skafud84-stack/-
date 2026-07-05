@@ -2957,6 +2957,71 @@ function addProductToLook(itemId, lookIdx, text) {
   it.productList = rebuildProductList(groups);
   delete it.customCaption; delete it.partCaptions;
   save(); refreshLookEditor(itemId);
+  // 링크 있으면 이미지·가격 자동 채우기 (백그라운드, 실패해도 조용히)
+  if (prod.url) autoFillProduct(itemId, lookIdx, groups[lookIdx].products.length - 1, null, true);
+}
+
+// ── 🪄 링크로 이미지·가격 자동 채우기 (Vercel API 이용, 설치 불필요) ──
+async function autoFillProduct(itemId, lookIdx, prodIdx, btn, silent) {
+  const it = items.find(x => x.id === itemId);
+  if (!it) return;
+  const groups = parseLooksGrouped(it.productList);
+  const p = groups[lookIdx]?.products?.[prodIdx];
+  if (!p) return;
+  if (!p.url) { if (!silent) alert('제품에 🔗 링크가 없어요'); return; }
+  const orig = btn ? btn.textContent : '';
+  if (btn) btn.textContent = '⏳';
+  try {
+    const r = await fetch('/api/fetch?url=' + encodeURIComponent(p.url));
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    // 가격: 비어있을 때만 채움 (수동 입력 존중)
+    if (d.price && !p.price) {
+      groups[lookIdx].products[prodIdx].price = Number(d.price).toLocaleString('ko-KR');
+      it.productList = rebuildProductList(groups);
+      delete it.customCaption; delete it.partCaptions;
+    }
+    // 이미지: 없을 때만 (프록시 경유로 canvas 압축)
+    if (d.image && getProdImgs(it, lookIdx, prodIdx).length === 0) {
+      await new Promise((ok, ng) => {
+        const im = new Image();
+        im.crossOrigin = 'anonymous';
+        im.onload = function() {
+          const c = document.createElement('canvas'); c.width = 120; c.height = 120;
+          const ctx = c.getContext('2d');
+          const min = Math.min(im.width, im.height);
+          ctx.drawImage(im, (im.width-min)/2, (im.height-min)/2, min, min, 0, 0, 120, 120);
+          if (!it.prodImages) it.prodImages = {};
+          it.prodImages[lookIdx + '_' + prodIdx] = c.toDataURL('image/jpeg', 0.7);
+          ok();
+        };
+        im.onerror = () => ng(new Error('이미지 로드 실패'));
+        im.src = '/api/fetch?img=' + encodeURIComponent(d.image);
+      });
+    }
+    save(); refreshLookEditor(itemId);
+    if (!d.image && !d.price && !silent) alert('이 페이지에서 이미지·가격을 못 찾았어요 😥 수동으로 넣어주세요');
+  } catch (e) {
+    if (btn) btn.textContent = orig;
+    if (!silent) alert('🪄 자동 채우기 실패: ' + e.message + '\n수동 입력으로 해주세요');
+  }
+}
+// LOOK 전체 자동 채우기 (빈 것만, 순차)
+async function autoFillLook(itemId, lookIdx, btn) {
+  const it = items.find(x => x.id === itemId);
+  if (!it) return;
+  const groups = parseLooksGrouped(it.productList);
+  const prods = groups[lookIdx]?.products || [];
+  const orig = btn ? btn.textContent : '';
+  if (btn) btn.textContent = '⏳';
+  for (let pi = 0; pi < prods.length; pi++) {
+    const p = prods[pi];
+    if (!p.url) continue;
+    if (p.price && getProdImgs(it, lookIdx, pi).length > 0) continue; // 이미 다 있음
+    await autoFillProduct(itemId, lookIdx, pi, null, true);
+  }
+  if (btn) btn.textContent = orig;
+  refreshLookEditor(itemId);
 }
 
 // ── 제품(옷) 삭제 ──
@@ -3519,6 +3584,7 @@ function buildLookCards(it) {
           onchange="moveProductToLook('${it.id}',${li},${pi},Number(this.value))">
           ${Array.from({length:totalLooks},(_, k) => `<option value="${k}" ${k===li?'selected':''}>${k+1}</option>`).join('')}
         </select>
+        ${p.url ? `<button onclick="event.stopPropagation();autoFillProduct('${it.id}',${li},${pi},this)" class="text-[9px] opacity-0 group-hover/prod:opacity-60 hover:!opacity-100 transition-opacity" title="링크로 이미지·가격 자동 채우기" draggable="false">🪄</button>` : ''}
         <button onclick="event.stopPropagation();duplicateProduct('${it.id}',${li},${pi})" class="text-[9px] opacity-0 group-hover/prod:opacity-60 hover:!opacity-100 transition-opacity" title="제품 복제" draggable="false">📋</button>
         <button onclick="event.stopPropagation();deleteProduct('${it.id}',${li},${pi})" class="text-[9px] opacity-0 group-hover/prod:opacity-60 hover:!opacity-100 hover:!text-red-500 transition-all" title="제품 삭제" draggable="false">🗑️</button>
       </div>`;
@@ -3539,6 +3605,7 @@ function buildLookCards(it) {
         <span class="text-xs font-bold flex-1">LOOK ${displayNum}</span>
         ${partLabel ? `<span class="text-[9px] font-bold text-pink-400">${partLabel}</span>` : ''}
         <span class="text-[10px] text-muted">${prods.length}개</span>
+        <button onclick="event.stopPropagation();autoFillLook('${it.id}',${li},this)" class="text-[11px] opacity-30 hover:opacity-100 transition-all flex-shrink-0" title="빈 이미지·가격 전부 자동 채우기" draggable="false">🪄</button>
         <button onclick="event.stopPropagation();deleteLook('${it.id}',${li})" class="text-[11px] opacity-30 hover:opacity-100 hover:text-red-500 transition-all flex-shrink-0" title="LOOK 삭제" draggable="false">🗑️</button>
       </div>
       <!-- 제품 목록 (각 제품에 이미지 포함) -->
